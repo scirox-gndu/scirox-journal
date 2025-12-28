@@ -104,6 +104,19 @@
         .ink-red { color: #b71c1c; }
         .ink-black { color: #212121; }
 
+        /* Sort Tab Active Style */
+        .sort-tab.active {
+            border-bottom: 3px solid #0891b2; /* cyan-600 */
+            color: #0891b2;
+            font-weight: bold;
+        }
+        .sort-tab {
+            border-bottom: 3px solid transparent;
+            color: #78716c; /* stone-500 */
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
         /* Custom Scrollbar */
         ::-webkit-scrollbar {
             width: 10px;
@@ -137,6 +150,8 @@
             updateDoc, 
             deleteDoc, 
             arrayUnion, 
+            arrayRemove,
+            increment,
             serverTimestamp,
             Timestamp 
         } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -166,7 +181,8 @@
             loading: true,
             isAdmin: false,
             showForm: false,
-            expandedCards: new Set() // Track which cards show replies
+            expandedCards: new Set(),
+            sortBy: 'newest' // 'newest' or 'rank'
         };
 
         // --- DOM Elements ---
@@ -178,6 +194,18 @@
             const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
             return date.toLocaleDateString('en-US', { 
                 weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+            });
+        };
+
+        const sortIdeas = (ideas) => {
+            if (state.sortBy === 'rank') {
+                return [...ideas].sort((a, b) => (b.score || 0) - (a.score || 0));
+            }
+            // Default newest
+            return [...ideas].sort((a, b) => {
+                const tA = a.createdAt?.toMillis() || 0;
+                const tB = b.createdAt?.toMillis() || 0;
+                return tB - tA;
             });
         };
 
@@ -196,11 +224,9 @@
                 return;
             }
 
-            // Header - Fully Responsive spacing
-            // pl-12 on mobile to clear the 30px red line + spacing
-            // pl-24 on desktop to clear 60px red line + spacing
+            // Header with Sorting
             const headerHTML = `
-                <header class="p-6 md:p-8 pb-4 pl-12 md:pl-24 border-b-2 border-stone-300 relative">
+                <header class="p-6 md:p-8 pb-4 pl-12 md:pl-24 border-b-2 border-stone-300 relative bg-stone-50/50">
                     <div class="flex flex-col md:flex-row justify-between items-start gap-4 md:gap-0">
                         <div>
                             <h1 class="text-3xl md:text-5xl font-typewriter font-bold text-stone-800 tracking-tighter" style="transform: rotate(-1deg);">
@@ -216,24 +242,34 @@
                             </button>
                         </div>
                     </div>
-                    
-                    <!-- Intro Sticker - Responsive Width & Rotation -->
-                    <div class="mt-4 md:mt-6 bg-yellow-100 p-3 md:p-4 transform rotate-1 shadow-md w-full md:max-w-lg border border-yellow-200" style="clip-path: polygon(0% 0%, 100% 2%, 98% 100%, 2% 98%);">
-                        <p class="font-handwriting text-base md:text-lg text-stone-700 leading-tight">
+
+                    <!-- Intro Sticker -->
+                    <div class="mt-4 bg-yellow-100 p-3 transform rotate-1 shadow-sm w-full md:max-w-lg border border-yellow-200 mb-6">
+                        <p class="font-handwriting text-base text-stone-700 leading-tight">
                             ${state.isAdmin 
                                 ? "<strong class='text-red-700'>ADMIN ACCESS:</strong> You can remove pages (delete) and write official notes (bold)." 
-                                : "<strong>To all members:</strong> This journal is for recording experiment ideas, workshop proposals, and scientific queries. The Core Team checks this daily."}
+                                : "Vote for the best experiments! One vote per device per idea."}
                         </p>
                     </div>
 
-                    <!-- FAB: Adjust position for mobile to not cover text -->
+                    <!-- Sorting Tabs -->
+                    <div class="flex gap-6 font-typewriter text-sm md:text-base border-b border-stone-200">
+                        <button onclick="window.setSort('newest')" class="sort-tab pb-2 ${state.sortBy === 'newest' ? 'active' : ''}">
+                            <i data-lucide="clock" class="w-4 h-4 inline mb-0.5 mr-1"></i> Newest Entries
+                        </button>
+                        <button onclick="window.setSort('rank')" class="sort-tab pb-2 ${state.sortBy === 'rank' ? 'active' : ''}">
+                            <i data-lucide="trophy" class="w-4 h-4 inline mb-0.5 mr-1"></i> Top Ranked
+                        </button>
+                    </div>
+
+                    <!-- FAB -->
                     <button onclick="window.toggleForm()" class="absolute -bottom-5 right-4 md:-bottom-6 md:right-8 bg-blue-600 text-white p-3 md:p-4 rounded-full shadow-lg hover:bg-blue-700 hover:scale-110 transition-all transform z-20 group">
                         <i data-lucide="${state.showForm ? 'x' : 'plus'}" class="w-6 h-6 group-hover:rotate-90 transition-transform"></i>
                     </button>
                 </header>
             `;
 
-            // Form - Responsive Margins
+            // Form
             let formHTML = '';
             if (state.showForm) {
                 formHTML = `
@@ -271,13 +307,14 @@
                 `;
             }
 
-            // List - Responsive Padding
-            const ideasHTML = state.ideas.length === 0 
+            // Sorted Ideas
+            const sortedIdeas = sortIdeas(state.ideas);
+            const ideasHTML = sortedIdeas.length === 0 
                 ? `<div class="text-center py-20 opacity-50 font-handwriting text-xl md:text-2xl px-4 pl-12 md:pl-16">
                     The pages are empty. Waiting for data...
                    </div>`
                 : `<div class="space-y-6 md:space-y-8 px-4 md:px-20 py-8 pb-24 md:pb-20">
-                    ${state.ideas.map(idea => renderIdeaCard(idea)).join('')}
+                    ${sortedIdeas.map(idea => renderIdeaCard(idea)).join('')}
                    </div>`;
 
             appContainer.innerHTML = headerHTML + formHTML + ideasHTML;
@@ -288,6 +325,12 @@
             const isExpanded = state.expandedCards.has(idea.id);
             const isAnnouncement = idea.isAdmin;
             
+            // Voting State
+            const uid = state.user ? state.user.uid : null;
+            const upvoted = idea.upvoters?.includes(uid);
+            const downvoted = idea.downvoters?.includes(uid);
+            const score = idea.score || 0;
+
             // Generate HTML for replies
             const repliesHTML = (idea.replies || []).map(reply => `
                 <div class="flex gap-3 mb-3 group">
@@ -308,68 +351,90 @@
                 </div>
             `).join('');
 
-            const replyFormHTML = `
-                <form onsubmit="window.submitReply(event, '${idea.id}')" class="mt-4 flex flex-col gap-2 pl-0 md:pl-7">
-                    ${!state.isAdmin ? `
-                        <input type="text" name="replyAuthor" placeholder="Your Name" 
-                        class="bg-transparent border-b border-stone-300 text-sm font-handwriting py-1 w-full md:w-1/2 outline-none focus:border-blue-500">
-                    ` : '<div class="text-xs font-bold text-red-600 font-typewriter">REPLYING AS ADMIN</div>'}
-                    
-                    <div class="flex flex-col md:flex-row gap-2">
-                        <input type="text" name="replyText" placeholder="Add a margin note..." required
-                            class="flex-1 bg-transparent border-b border-stone-300 font-handwriting text-lg py-1 outline-none focus:border-blue-500 ${state.isAdmin ? 'font-bold text-red-800' : ''}">
-                        <button type="submit" class="text-stone-400 hover:text-stone-800 transition-colors p-2 md:p-0 flex items-center justify-center md:block">
-                            <i data-lucide="send" class="w-5 h-5"></i>
-                        </button>
-                    </div>
-                </form>
-            `;
-
             return `
-                <div class="entry-card p-4 md:p-6 rounded-sm ${isAnnouncement ? 'border-l-4 border-l-red-500 bg-red-50/30' : ''} ml-6 md:ml-0">
+                <div class="entry-card rounded-sm ${isAnnouncement ? 'border-l-4 border-l-red-500 bg-red-50/30' : ''} ml-6 md:ml-0 flex">
                     ${isAnnouncement ? '<div class="tape-section"></div>' : ''}
                     
                     ${state.isAdmin ? `
-                        <button onclick="window.deleteIdea('${idea.id}')" class="absolute top-2 right-2 p-2 text-stone-300 hover:text-red-600 transition-colors" title="Tear out page">
+                        <button onclick="window.deleteIdea('${idea.id}')" class="absolute top-2 right-2 p-2 text-stone-300 hover:text-red-600 transition-colors z-10" title="Tear out page">
                             <i data-lucide="trash-2" class="w-5 h-5"></i>
                         </button>
                     ` : ''}
 
-                    <div class="flex flex-col mb-4">
-                        <div class="flex flex-wrap items-center gap-2 mb-1">
-                            <span class="bg-stone-200 text-stone-600 text-[10px] font-typewriter px-2 py-0.5 rounded">ENTRY #${idea.id.slice(0,4)}</span>
-                            <span class="text-stone-400 font-handwriting text-sm">${formatDate(idea.createdAt)}</span>
-                        </div>
-                        <h3 class="text-xl md:text-2xl font-bold font-typewriter ${isAnnouncement ? 'text-red-700' : 'text-stone-800'} mt-1">
-                            ${idea.title}
-                        </h3>
-                        <p class="text-sm font-handwriting text-stone-500">Recorded by: <span class="border-b border-stone-300">${idea.author}</span></p>
+                    <!-- Vote Column -->
+                    <div class="w-12 bg-stone-50 border-r border-dashed border-stone-200 flex flex-col items-center pt-4 gap-1">
+                        <button onclick="window.vote('${idea.id}', 'up')" 
+                            class="p-1 rounded hover:bg-stone-200 transition-colors ${upvoted ? 'text-green-600 font-bold' : 'text-stone-400'}">
+                            <i data-lucide="chevron-up" class="w-6 h-6"></i>
+                        </button>
+                        
+                        <span class="font-typewriter font-bold text-lg ${score > 0 ? 'text-stone-800' : (score < 0 ? 'text-red-500' : 'text-stone-400')}">
+                            ${score}
+                        </span>
+
+                        <button onclick="window.vote('${idea.id}', 'down')"
+                            class="p-1 rounded hover:bg-stone-200 transition-colors ${downvoted ? 'text-red-500 font-bold' : 'text-stone-400'}">
+                            <i data-lucide="chevron-down" class="w-6 h-6"></i>
+                        </button>
                     </div>
 
-                    <div class="font-handwriting text-lg md:text-xl leading-relaxed mb-6 ${isAnnouncement ? 'font-bold text-stone-900' : 'text-stone-800'}" style="white-space: pre-wrap;">${idea.description}</div>
-
-                    <!-- Footer / Interaction -->
-                    <div class="border-t-2 border-dashed border-stone-200 pt-3">
-                        <button onclick="window.toggleReplies('${idea.id}')" class="flex items-center gap-2 text-stone-500 hover:text-blue-600 transition-colors w-full md:w-auto">
-                            <i data-lucide="message-square" class="w-4 h-4"></i>
-                            <span class="font-typewriter text-xs uppercase tracking-wider">
-                                Field Notes (${idea.replies ? idea.replies.length : 0})
-                            </span>
-                            <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-4 h-4 ml-auto md:ml-0"></i>
-                        </button>
-
-                        ${isExpanded ? `
-                            <div class="mt-4 bg-stone-50 p-3 md:p-4 rounded-sm border border-stone-100">
-                                ${repliesHTML.length > 0 ? repliesHTML : '<p class="text-stone-400 font-handwriting text-center">No notes added yet.</p>'}
-                                ${replyFormHTML}
+                    <!-- Content Column -->
+                    <div class="flex-1 p-4 md:p-6">
+                        <div class="flex flex-col mb-4">
+                            <div class="flex flex-wrap items-center gap-2 mb-1">
+                                <span class="bg-stone-200 text-stone-600 text-[10px] font-typewriter px-2 py-0.5 rounded">ENTRY #${idea.id.slice(0,4)}</span>
+                                <span class="text-stone-400 font-handwriting text-sm">${formatDate(idea.createdAt)}</span>
                             </div>
-                        ` : ''}
+                            <h3 class="text-xl md:text-2xl font-bold font-typewriter ${isAnnouncement ? 'text-red-700' : 'text-stone-800'} mt-1">
+                                ${idea.title}
+                            </h3>
+                            <p class="text-sm font-handwriting text-stone-500">Recorded by: <span class="border-b border-stone-300">${idea.author}</span></p>
+                        </div>
+
+                        <div class="font-handwriting text-lg md:text-xl leading-relaxed mb-6 ${isAnnouncement ? 'font-bold text-stone-900' : 'text-stone-800'}" style="white-space: pre-wrap;">${idea.description}</div>
+
+                        <!-- Footer -->
+                        <div class="border-t-2 border-dashed border-stone-200 pt-3">
+                            <button onclick="window.toggleReplies('${idea.id}')" class="flex items-center gap-2 text-stone-500 hover:text-blue-600 transition-colors w-full md:w-auto">
+                                <i data-lucide="message-square" class="w-4 h-4"></i>
+                                <span class="font-typewriter text-xs uppercase tracking-wider">
+                                    Field Notes (${idea.replies ? idea.replies.length : 0})
+                                </span>
+                                <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-4 h-4 ml-auto md:ml-0"></i>
+                            </button>
+
+                            ${isExpanded ? `
+                                <div class="mt-4 bg-stone-50 p-3 md:p-4 rounded-sm border border-stone-100">
+                                    ${repliesHTML.length > 0 ? repliesHTML : '<p class="text-stone-400 font-handwriting text-center">No notes added yet.</p>'}
+                                    
+                                    <form onsubmit="window.submitReply(event, '${idea.id}')" class="mt-4 flex flex-col gap-2 pl-0 md:pl-7">
+                                        ${!state.isAdmin ? `
+                                            <input type="text" name="replyAuthor" placeholder="Your Name" 
+                                            class="bg-transparent border-b border-stone-300 text-sm font-handwriting py-1 w-full md:w-1/2 outline-none focus:border-blue-500">
+                                        ` : '<div class="text-xs font-bold text-red-600 font-typewriter">REPLYING AS ADMIN</div>'}
+                                        
+                                        <div class="flex flex-col md:flex-row gap-2">
+                                            <input type="text" name="replyText" placeholder="Add a margin note..." required
+                                                class="flex-1 bg-transparent border-b border-stone-300 font-handwriting text-lg py-1 outline-none focus:border-blue-500 ${state.isAdmin ? 'font-bold text-red-800' : ''}">
+                                            <button type="submit" class="text-stone-400 hover:text-stone-800 transition-colors p-2 md:p-0 flex items-center justify-center md:block">
+                                                <i data-lucide="send" class="w-5 h-5"></i>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            ` : ''}
+                        </div>
                     </div>
                 </div>
             `;
         }
 
-        // --- Window/Global Actions (for HTML onclick handlers) ---
+        // --- Window/Global Actions ---
+
+        window.setSort = (type) => {
+            state.sortBy = type;
+            render();
+        };
 
         window.toggleAdmin = () => {
             if (state.isAdmin) {
@@ -416,13 +481,79 @@
                     author: state.isAdmin ? 'Scirox Core Team' : (author || 'Anonymous Researcher'),
                     isAdmin: state.isAdmin,
                     createdAt: serverTimestamp(),
-                    replies: []
+                    replies: [],
+                    score: 0,
+                    upvoters: [],
+                    downvoters: []
                 });
                 state.showForm = false;
                 render();
             } catch (err) {
                 console.error(err);
                 alert("Error writing to journal.");
+            }
+        };
+
+        window.vote = async (id, type) => {
+            if (!state.user) {
+                alert("Connecting to database... please wait.");
+                return;
+            }
+            const uid = state.user.uid;
+            const idea = state.ideas.find(i => i.id === id);
+            if (!idea) return;
+
+            // Check if already voted
+            const isUp = idea.upvoters?.includes(uid);
+            const isDown = idea.downvoters?.includes(uid);
+            const ref = doc(db, "scirox_ideas", id);
+
+            try {
+                if (type === 'up') {
+                    if (isUp) {
+                        // Toggle OFF (remove upvote)
+                        await updateDoc(ref, {
+                            upvoters: arrayRemove(uid),
+                            score: increment(-1)
+                        });
+                    } else if (isDown) {
+                        // Switch (remove down, add up)
+                        await updateDoc(ref, {
+                            downvoters: arrayRemove(uid),
+                            upvoters: arrayUnion(uid),
+                            score: increment(2) // +1 to neutralize down, +1 for up
+                        });
+                    } else {
+                        // New Upvote
+                        await updateDoc(ref, {
+                            upvoters: arrayUnion(uid),
+                            score: increment(1)
+                        });
+                    }
+                } else if (type === 'down') {
+                    if (isDown) {
+                        // Toggle OFF (remove downvote)
+                        await updateDoc(ref, {
+                            downvoters: arrayRemove(uid),
+                            score: increment(1)
+                        });
+                    } else if (isUp) {
+                        // Switch (remove up, add down)
+                        await updateDoc(ref, {
+                            upvoters: arrayRemove(uid),
+                            downvoters: arrayUnion(uid),
+                            score: increment(-2)
+                        });
+                    } else {
+                        // New Downvote
+                        await updateDoc(ref, {
+                            downvoters: arrayUnion(uid),
+                            score: increment(-1)
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error("Voting error", err);
             }
         };
 
@@ -476,7 +607,8 @@
             onAuthStateChanged(auth, (user) => {
                 state.user = user;
                 if (user) {
-                    const q = query(collection(db, "scirox_ideas"), orderBy("createdAt", "desc"));
+                    // Fetch all and sort client-side to avoid complex index requirements for dynamic sorting
+                    const q = query(collection(db, "scirox_ideas")); 
                     onSnapshot(q, (snapshot) => {
                         state.ideas = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
                         state.loading = false;
