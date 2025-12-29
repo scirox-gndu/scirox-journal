@@ -33,10 +33,10 @@
             background-size: 20px 20px;
             background-position: 0 0;
             box-shadow: 
-                0 0 0 5px #4a4a4a, /* Thinner edge for mobile */
+                0 0 0 3px #4a4a4a, /* Thinner edge for mobile */
                 5px 5px 15px rgba(0,0,0,0.5);
             position: relative;
-            min-height: 90vh; /* Full height on mobile */
+            min-height: 95vh; /* Taller on mobile */
             transition: all 0.3s ease;
             z-index: 10;
         }
@@ -47,7 +47,7 @@
             position: absolute;
             top: 0;
             bottom: 0;
-            left: 20px; /* Tighter margin for mobile */
+            left: 12px; /* Very tight margin for mobile */
             width: 2px;
             background-color: #ff9999;
             z-index: 10;
@@ -58,6 +58,7 @@
                 box-shadow: 
                     0 0 0 10px #4a4a4a,
                     15px 15px 40px rgba(0,0,0,0.6);
+                min-height: 90vh;
             }
             .journal-binder::before {
                 left: 60px;
@@ -68,18 +69,18 @@
         /* Mobile: Top Folder Tabs */
         .bookmark-container {
             position: absolute;
-            top: -38px; /* Stick out top */
-            right: 10px;
+            top: -32px; /* Stick out top less */
+            right: 5px;
             display: flex;
             flex-direction: row; /* Horizontal on mobile */
-            gap: 4px;
+            gap: 2px;
             z-index: 5;
         }
 
         .bookmark {
-            width: 85px;
-            height: 45px;
-            border-radius: 10px 10px 0 0; /* Top rounded */
+            width: 70px; /* Smaller tabs */
+            height: 35px;
+            border-radius: 8px 8px 0 0; /* Top rounded */
             box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
             cursor: pointer;
             transition: transform 0.2s ease;
@@ -89,7 +90,7 @@
             color: #fff;
             font-family: 'Special Elite', monospace;
             font-weight: bold;
-            font-size: 0.9rem;
+            font-size: 0.75rem; /* Smaller font */
             position: relative;
             border: 1px solid rgba(0,0,0,0.1);
             border-bottom: none;
@@ -100,9 +101,9 @@
         }
         
         .bookmark.active {
-            transform: translateY(-5px);
+            transform: translateY(-4px);
             box-shadow: 0 -4px 8px rgba(0,0,0,0.3);
-            height: 50px; /* Taller active state */
+            height: 40px; /* Taller active state */
             z-index: 11; /* Sit above binder */
         }
 
@@ -163,8 +164,8 @@
         .readable-mode .font-handwriting,
         .readable-mode .font-marker {
             font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-            font-size: 1rem !important;
-            line-height: 1.5 !important;
+            font-size: 0.95rem !important; /* Slightly smaller for mobile readability */
+            line-height: 1.4 !important;
             letter-spacing: normal !important;
         }
         
@@ -210,7 +211,7 @@
             left: 0;
             top: 0;
             bottom: 0;
-            width: 25px;
+            width: 20px; /* Thinner spine on mobile */
             background: rgba(255,255,255,0.1);
             border-right: 1px solid rgba(0,0,0,0.3);
             box-shadow: 2px 0 5px rgba(0,0,0,0.3);
@@ -229,8 +230,8 @@
             top: -10px;
             left: 50%;
             transform: translateX(-50%);
-            width: 100px;
-            height: 30px;
+            width: 80px; /* Smaller tape */
+            height: 25px;
             background-color: rgba(255, 255, 255, 0.4);
             border-left: 1px dashed rgba(0,0,0,0.1);
             border-right: 1px dashed rgba(0,0,0,0.1);
@@ -240,13 +241,13 @@
 
         /* Threaded Chat */
         .chat-bubble {
-            max-width: 85%;
+            max-width: 90%;
             position: relative;
-            padding: 10px 15px;
-            margin-bottom: 12px;
-            border-radius: 20px; 
+            padding: 8px 12px;
+            margin-bottom: 2px;
+            border-radius: 16px; 
             font-family: 'Patrick Hand', cursive;
-            font-size: 1.1rem;
+            font-size: 1rem;
             box-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
 
@@ -264,12 +265,12 @@
         }
 
         /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #2d2a26; }
         ::-webkit-scrollbar-thumb { background: #8d6e63; border-radius: 5px; }
     </style>
 </head>
-<body class="p-0 md:p-8 min-h-screen flex items-center justify-center pt-12 md:pt-8">
+<body class="p-0 md:p-8 min-h-screen flex items-center justify-center pt-8 md:pt-8">
 
     <!-- App Container -->
     <div id="app" class="relative w-full max-w-5xl">
@@ -346,6 +347,12 @@
             });
         };
 
+        const formatTime = (timestamp) => {
+            if (!timestamp) return 'Now';
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        };
+
         const sortIdeas = (ideas) => {
             if (state.sortBy === 'rank') return [...ideas].sort((a, b) => (b.score || 0) - (a.score || 0));
             return [...ideas].sort((a, b) => {
@@ -368,8 +375,8 @@
                 contentHTML = `
                     <div class="flex-1 flex items-center justify-center min-h-[50vh]">
                         <div class="text-center">
-                            <i data-lucide="loader-2" class="w-12 h-12 animate-spin text-stone-500 mx-auto mb-2"></i>
-                            <p class="font-typewriter text-stone-500">Opening Scirox Journal...</p>
+                            <i data-lucide="loader-2" class="w-10 h-10 animate-spin text-stone-500 mx-auto mb-2"></i>
+                            <p class="font-typewriter text-stone-500 text-sm">Opening Journal...</p>
                         </div>
                     </div>`;
             } else {
@@ -391,13 +398,13 @@
             const bookmarksHTML = `
                 <div class="bookmark-container">
                     <div onclick="window.setView('logbook')" class="bookmark bookmark-red ${state.currentView === 'logbook' ? 'active' : ''}">
-                        <span>LOGBOOK</span>
+                        <span>LOGS</span>
                     </div>
                     <div onclick="window.setView('events')" class="bookmark bookmark-blue ${state.currentView === 'events' || state.currentView === 'discussion' ? 'active' : ''}">
                         <span>EVENTS</span>
                     </div>
                     <div onclick="window.setView('admin')" class="bookmark bookmark-yellow ${state.currentView === 'admin' ? 'active' : ''}">
-                        <span>NOTICES</span>
+                        <span>ADMIN</span>
                     </div>
                 </div>
             `;
@@ -428,50 +435,52 @@
             let subtitle = "Field Notes & Ideas";
             
             if (state.currentView === 'admin') {
-                title = "ADMIN NOTICES";
+                title = "NOTICES";
                 subtitle = "Official Announcements";
             } else if (state.currentView === 'events') {
-                title = "EVENT NOTEBOOKS";
-                subtitle = "Active Discussions";
+                title = "EVENTS";
+                subtitle = "Active Notebooks";
             } else if (state.currentView === 'discussion') {
                 const activeIdea = state.ideas.find(i => i.id === state.activeDiscussionId);
-                title = "DISCUSSION"; // Shortened for mobile
-                subtitle = activeIdea ? `Re: ${activeIdea.title}` : "Loading topic...";
+                title = "CHAT";
+                subtitle = activeIdea ? `Re: ${activeIdea.title}` : "Loading...";
             }
 
             return `
-                <header class="p-6 md:p-8 pb-4 pl-8 md:pl-24 border-b-2 border-stone-300 relative bg-stone-50/50">
+                <header class="p-4 md:p-8 pb-3 pl-6 md:pl-24 border-b-2 border-stone-300 relative bg-stone-50/50">
                     <div class="flex flex-col md:flex-row justify-between items-start">
-                        <div class="max-w-[80%] md:max-w-full">
-                            <h1 class="text-2xl md:text-5xl font-typewriter font-bold text-stone-800 tracking-tighter" style="transform: rotate(-1deg);">
+                        <div class="w-full">
+                            <h1 class="text-xl md:text-5xl font-typewriter font-bold text-stone-800 tracking-tighter" style="transform: rotate(-1deg);">
                                 ${title}
                             </h1>
-                            <p class="text-sm md:text-xl text-stone-500 font-handwriting mt-1 ml-1 md:ml-2 truncate">
-                                ${state.currentView === 'discussion' 
-                                    ? `<button onclick="window.setView('events')" class="text-blue-600 hover:underline flex items-center gap-1"><i data-lucide="arrow-left" class="w-3 h-3 md:w-4 md:h-4"></i> Back</button>` 
-                                    : subtitle}
-                            </p>
-                        </div>
-                        
-                        <!-- Controls -->
-                        <div class="absolute top-4 right-4 md:top-6 md:right-6 md:static flex gap-1 md:gap-2 items-center">
-                            <button onclick="window.toggleFont()" class="p-2 rounded-full hover:bg-stone-200 transition-colors ${state.readableFont ? 'text-blue-600 bg-blue-50' : 'text-stone-400'}" title="Toggle Font">
-                                <i data-lucide="${state.readableFont ? 'pen-tool' : 'type'}" class="w-5 h-5 md:w-6 md:h-6"></i>
-                            </button>
-                            
-                            <button onclick="window.toggleAdmin()" class="p-2 rounded-full hover:bg-stone-200 transition-colors ${state.isAdmin ? 'text-red-600 bg-red-50' : 'text-stone-400'}" title="Admin Access">
-                                <i data-lucide="${state.isAdmin ? 'unlock' : 'lock'}" class="w-5 h-5 md:w-6 md:h-6"></i>
-                            </button>
+                            <div class="flex items-center justify-between w-full mt-1">
+                                <p class="text-xs md:text-xl text-stone-500 font-handwriting truncate max-w-[70%]">
+                                    ${state.currentView === 'discussion' 
+                                        ? `<button onclick="window.setView('events')" class="text-blue-600 hover:underline flex items-center gap-1 font-bold"><i data-lucide="arrow-left" class="w-3 h-3 md:w-4 md:h-4"></i> BACK</button>` 
+                                        : subtitle}
+                                </p>
+                                
+                                <!-- Controls (Font/Lock) -->
+                                <div class="flex gap-1 items-center">
+                                    <button onclick="window.toggleFont()" class="p-1.5 rounded-full hover:bg-stone-200 transition-colors ${state.readableFont ? 'text-blue-600 bg-blue-50' : 'text-stone-400'}" title="Toggle Font">
+                                        <i data-lucide="${state.readableFont ? 'pen-tool' : 'type'}" class="w-4 h-4 md:w-6 md:h-6"></i>
+                                    </button>
+                                    
+                                    <button onclick="window.toggleAdmin()" class="p-1.5 rounded-full hover:bg-stone-200 transition-colors ${state.isAdmin ? 'text-red-600 bg-red-50' : 'text-stone-400'}" title="Admin Access">
+                                        <i data-lucide="${state.isAdmin ? 'unlock' : 'lock'}" class="w-4 h-4 md:w-6 md:h-6"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     ${state.currentView === 'logbook' ? `
-                        <div class="flex gap-4 md:gap-6 font-typewriter text-xs md:text-sm mt-4 border-b border-stone-200 w-full overflow-x-auto">
-                            <button onclick="window.setSort('newest')" class="pb-2 whitespace-nowrap ${state.sortBy === 'newest' ? 'border-b-2 border-cyan-600 text-cyan-600 font-bold' : 'text-stone-400 hover:text-stone-600'}">Newest</button>
-                            <button onclick="window.setSort('rank')" class="pb-2 whitespace-nowrap ${state.sortBy === 'rank' ? 'border-b-2 border-cyan-600 text-cyan-600 font-bold' : 'text-stone-400 hover:text-stone-600'}">Top Ranked</button>
+                        <div class="flex gap-3 md:gap-6 font-typewriter text-[10px] md:text-sm mt-3 border-b border-stone-200 w-full overflow-x-auto pb-1">
+                            <button onclick="window.setSort('newest')" class="whitespace-nowrap ${state.sortBy === 'newest' ? 'text-cyan-600 font-bold underline' : 'text-stone-400'}">Newest</button>
+                            <button onclick="window.setSort('rank')" class="whitespace-nowrap ${state.sortBy === 'rank' ? 'text-cyan-600 font-bold underline' : 'text-stone-400'}">Top Ranked</button>
                             <div class="ml-auto flex-shrink-0">
-                                <button onclick="window.toggleForm()" class="bg-blue-600 text-white px-3 py-1 rounded-sm text-xs shadow hover:bg-blue-700 flex items-center gap-1">
-                                    <i data-lucide="plus" class="w-3 h-3"></i> <span class="hidden sm:inline">ADD ENTRY</span>
+                                <button onclick="window.toggleForm()" class="bg-blue-600 text-white px-2 py-1 rounded-[2px] shadow hover:bg-blue-700 flex items-center gap-1">
+                                    <i data-lucide="plus" class="w-3 h-3"></i> ADD
                                 </button>
                             </div>
                         </div>
@@ -482,10 +491,10 @@
 
         function renderLogbook() {
             const sortedIdeas = sortIdeas(state.ideas);
-            if (sortedIdeas.length === 0) return emptyState("The pages are empty. Start writing.");
+            if (sortedIdeas.length === 0) return emptyState("Pages are empty.");
             
             return `
-                <div class="space-y-6 px-4 md:px-20 py-8 pb-24 overflow-y-auto h-[70vh]">
+                <div class="space-y-4 md:space-y-6 px-2 md:px-20 py-4 pb-24 overflow-y-auto h-[78vh] md:h-[70vh]">
                     ${sortedIdeas.map(idea => renderIdeaCard(idea)).join('')}
                 </div>
             `;
@@ -494,10 +503,10 @@
         function renderAdminLog() {
             const adminIdeas = state.ideas.filter(i => i.isAdmin).sort((a,b) => b.createdAt?.toMillis() - a.createdAt?.toMillis());
             
-            if (adminIdeas.length === 0) return emptyState("No official announcements yet.");
+            if (adminIdeas.length === 0) return emptyState("No notices.");
 
             return `
-                <div class="space-y-6 px-4 md:px-20 py-8 pb-24 overflow-y-auto h-[70vh]">
+                <div class="space-y-4 md:space-y-6 px-2 md:px-20 py-4 pb-24 overflow-y-auto h-[78vh] md:h-[70vh]">
                     ${adminIdeas.map(idea => renderIdeaCard(idea)).join('')}
                 </div>
             `;
@@ -506,23 +515,18 @@
         function renderEventsGrid() {
             const starredIdeas = state.ideas.filter(i => i.isStarred);
             
-            if (starredIdeas.length === 0) return emptyState("No events active.<br>Star an idea in the Logbook to discuss.");
+            if (starredIdeas.length === 0) return emptyState("No events.<br>Ask admin to star ideas.");
 
             return `
-                <div class="p-6 md:p-12 pb-24 overflow-y-auto h-[70vh]">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+                <div class="p-4 md:p-12 pb-24 overflow-y-auto h-[78vh] md:h-[70vh]">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">
                         ${starredIdeas.map(idea => `
-                            <div onclick="window.openDiscussion('${idea.id}')" class="notebook-cover h-64 flex items-center justify-center relative group">
+                            <div onclick="window.openDiscussion('${idea.id}')" class="notebook-cover h-48 md:h-64 flex items-center justify-center relative group">
                                 <div class="notebook-spine"></div>
-                                <div class="notebook-label w-3/4 p-4 bg-white text-center shadow-sm">
-                                    <p class="font-typewriter text-xs text-stone-500 uppercase tracking-widest mb-1">EVENT LOG</p>
-                                    <h3 class="font-marker text-lg text-stone-800 leading-tight">${idea.title}</h3>
-                                    <p class="font-handwriting text-stone-400 text-sm mt-2">${formatDate(idea.createdAt)}</p>
-                                </div>
-                                
-                                <!-- Hover Hint -->
-                                <div class="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity text-white/50 text-xs font-typewriter">
-                                    OPEN <i data-lucide="arrow-right" class="w-3 h-3 inline"></i>
+                                <div class="notebook-label w-4/5 p-2 md:p-4 bg-white text-center shadow-sm">
+                                    <p class="font-typewriter text-[8px] md:text-xs text-stone-500 uppercase tracking-widest mb-1">LOG</p>
+                                    <h3 class="font-marker text-xs md:text-lg text-stone-800 leading-tight line-clamp-2">${idea.title}</h3>
+                                    <p class="font-handwriting text-stone-400 text-[10px] md:text-sm mt-1">${formatDate(idea.createdAt)}</p>
                                 </div>
                             </div>
                         `).join('')}
@@ -533,29 +537,31 @@
 
         function renderThreadedChat() {
             const activeIdea = state.ideas.find(i => i.id === state.activeDiscussionId);
-            if (!activeIdea) return emptyState("Topic not found.");
+            if (!activeIdea) return emptyState("Topic missing.");
 
             return `
-                <div class="flex flex-col h-[70vh]">
+                <div class="flex flex-col h-[78vh] md:h-[70vh]">
                     <!-- Chat Area -->
-                    <div id="chat-container" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
-                        <div class="text-center mb-6 border-b border-dashed border-stone-300 pb-4">
-                            <h3 class="font-typewriter text-lg md:text-xl text-stone-700 font-bold mb-2">${activeIdea.title}</h3>
-                            <p class="font-handwriting text-stone-500 text-base md:text-lg">${activeIdea.description}</p>
+                    <div id="chat-container" class="flex-1 overflow-y-auto p-3 md:p-8 space-y-3">
+                        <div class="text-center mb-4 border-b border-dashed border-stone-300 pb-2">
+                            <h3 class="font-typewriter text-base md:text-xl text-stone-700 font-bold mb-1">${activeIdea.title}</h3>
+                            <p class="font-handwriting text-stone-500 text-sm md:text-lg line-clamp-2">${activeIdea.description}</p>
                         </div>
                         
                         ${state.chats.length === 0 
-                            ? `<div class="text-center text-stone-400 font-handwriting italic mt-10">The discussion page is blank. Be the first to write.</div>` 
+                            ? `<div class="text-center text-stone-400 font-handwriting italic mt-10 text-sm">No messages yet.</div>` 
                             : state.chats.map(chat => {
                                 const isMe = state.user && state.user.uid === chat.authorId;
+                                // Name Logic: Show name explicitly
+                                const nameHTML = `<div class="text-[10px] md:text-xs font-bold font-typewriter ${isMe ? 'text-right text-blue-800 mr-2' : 'text-left text-stone-600 ml-2'} mb-0.5">${chat.author}</div>`;
+                                
                                 return `
-                                    <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
-                                        <div class="chat-bubble ${isMe ? 'mine' : 'theirs'} ${chat.isAdmin ? 'border-red-300 bg-red-50' : ''}">
-                                            <p class="${chat.isAdmin ? 'font-bold text-red-900' : 'text-stone-800'} text-sm md:text-base">${chat.text}</p>
+                                    <div class="flex flex-col w-full">
+                                        ${nameHTML}
+                                        <div class="chat-bubble ${isMe ? 'mine' : 'theirs'} ${chat.isAdmin ? 'border border-red-200 bg-red-50' : ''}">
+                                            <p class="${chat.isAdmin ? 'font-bold text-red-900' : 'text-stone-800'} text-sm md:text-base leading-snug">${chat.text}</p>
+                                            <div class="text-[9px] text-stone-400 text-right mt-1 opacity-70">${formatTime(chat.createdAt)}</div>
                                         </div>
-                                        <span class="text-[9px] md:text-[10px] font-typewriter text-stone-400 mx-2 uppercase">
-                                            ${chat.author} • ${formatDate(chat.createdAt)}
-                                        </span>
                                     </div>
                                 `;
                             }).join('')
@@ -563,12 +569,12 @@
                     </div>
 
                     <!-- Input Area -->
-                    <div class="p-3 md:p-4 bg-stone-100 border-t border-stone-300">
+                    <div class="p-2 md:p-4 bg-stone-100 border-t border-stone-300">
                         <form onsubmit="window.submitChat(event)" class="flex gap-2 max-w-3xl mx-auto">
-                            <input type="text" id="chatInput" placeholder="Write a thought..." autocomplete="off"
-                                class="flex-1 bg-white border border-stone-300 rounded-lg px-3 py-2 md:px-4 font-handwriting text-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-                            <button type="submit" class="bg-stone-800 text-white p-2 rounded-lg hover:bg-stone-700 transition-colors">
-                                <i data-lucide="send" class="w-5 h-5 md:w-6 md:h-6"></i>
+                            <input type="text" id="chatInput" placeholder="Message..." autocomplete="off"
+                                class="flex-1 bg-white border border-stone-300 rounded-md px-3 py-2 font-handwriting text-base focus:outline-none focus:border-blue-500">
+                            <button type="submit" class="bg-stone-800 text-white p-2 rounded-md hover:bg-stone-700 transition-colors">
+                                <i data-lucide="send" class="w-5 h-5"></i>
                             </button>
                         </form>
                     </div>
@@ -581,52 +587,52 @@
             const upvoted = idea.upvoters?.includes(uid);
             const score = idea.score || 0;
 
-            // Updated ml-8 to ensure card doesn't hit red line on mobile
+            // Updated ml-3 to be very compact on mobile
             return `
-                <div class="entry-card rounded-sm ${idea.isAdmin ? 'border-l-4 border-l-red-500 bg-red-50/30' : ''} ml-8 md:ml-0 flex group">
+                <div class="entry-card rounded-sm ${idea.isAdmin ? 'border-l-4 border-l-red-500 bg-red-50/30' : ''} ml-3 md:ml-0 flex group">
                     ${idea.isAdmin ? '<div class="tape-section"></div>' : ''}
                     
                     ${state.isAdmin ? `
-                        <div class="absolute top-2 right-2 flex gap-1 z-10 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                             <button onclick="window.toggleStar('${idea.id}', ${!idea.isStarred})" class="p-1.5 ${idea.isStarred ? 'text-yellow-500 bg-yellow-50' : 'text-stone-300 hover:text-yellow-500'}" title="Star for Event Discussion">
-                                <i data-lucide="star" class="w-4 h-4 ${idea.isStarred ? 'fill-current' : ''}"></i>
+                        <div class="absolute top-1 right-1 flex gap-1 z-10 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                             <button onclick="window.toggleStar('${idea.id}', ${!idea.isStarred})" class="p-1 ${idea.isStarred ? 'text-yellow-500 bg-yellow-50' : 'text-stone-300 hover:text-yellow-500'}">
+                                <i data-lucide="star" class="w-3 h-3 ${idea.isStarred ? 'fill-current' : ''}"></i>
                             </button>
-                            <button onclick="window.deleteIdea('${idea.id}')" class="p-1.5 text-stone-300 hover:text-red-600">
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            <button onclick="window.deleteIdea('${idea.id}')" class="p-1 text-stone-300 hover:text-red-600">
+                                <i data-lucide="trash-2" class="w-3 h-3"></i>
                             </button>
                         </div>
-                    ` : (idea.isStarred ? `<div class="absolute top-2 right-2 text-yellow-500" title="Starred Event"><i data-lucide="star" class="w-5 h-5 fill-current"></i></div>` : '')}
+                    ` : (idea.isStarred ? `<div class="absolute top-1 right-1 text-yellow-500"><i data-lucide="star" class="w-3 h-3 fill-current"></i></div>` : '')}
 
-                    <!-- Vote Column -->
-                    <div class="w-10 md:w-12 bg-stone-50 border-r border-dashed border-stone-200 flex flex-col items-center pt-4 gap-1 flex-shrink-0">
-                        <button onclick="window.vote('${idea.id}', 'up')" class="p-1 rounded hover:bg-stone-200 ${upvoted ? 'text-green-600 font-bold' : 'text-stone-400'}">
-                            <i data-lucide="chevron-up" class="w-5 h-5 md:w-6 md:h-6"></i>
+                    <!-- Vote Column (Very skinny on mobile) -->
+                    <div class="w-8 md:w-12 bg-stone-50 border-r border-dashed border-stone-200 flex flex-col items-center pt-3 gap-0 flex-shrink-0">
+                        <button onclick="window.vote('${idea.id}', 'up')" class="p-0.5 hover:bg-stone-200 ${upvoted ? 'text-green-600' : 'text-stone-400'}">
+                            <i data-lucide="chevron-up" class="w-4 h-4 md:w-6 md:h-6"></i>
                         </button>
-                        <span class="font-typewriter font-bold text-base md:text-lg text-stone-700">${score}</span>
-                        <button onclick="window.vote('${idea.id}', 'down')" class="p-1 rounded hover:bg-stone-200 ${idea.downvoters?.includes(uid) ? 'text-red-500 font-bold' : 'text-stone-400'}">
-                            <i data-lucide="chevron-down" class="w-5 h-5 md:w-6 md:h-6"></i>
+                        <span class="font-typewriter font-bold text-sm md:text-lg text-stone-700">${score}</span>
+                        <button onclick="window.vote('${idea.id}', 'down')" class="p-0.5 hover:bg-stone-200 ${idea.downvoters?.includes(uid) ? 'text-red-500' : 'text-stone-400'}">
+                            <i data-lucide="chevron-down" class="w-4 h-4 md:w-6 md:h-6"></i>
                         </button>
                     </div>
 
                     <!-- Content -->
-                    <div class="flex-1 p-3 md:p-6">
-                        <div class="flex flex-wrap items-center gap-2 mb-1">
-                            <span class="bg-stone-200 text-stone-600 text-[10px] font-typewriter px-2 py-0.5 rounded">#${idea.id.slice(0,4)}</span>
-                            <span class="text-stone-400 font-handwriting text-xs md:text-sm">${formatDate(idea.createdAt)}</span>
-                            ${idea.isStarred ? `<span class="bg-blue-100 text-blue-700 text-[9px] md:text-[10px] font-typewriter px-2 py-0.5 rounded border border-blue-200 cursor-pointer" onclick="window.setView('events')">EVENT ACTIVE</span>` : ''}
+                    <div class="flex-1 p-2 md:p-6">
+                        <div class="flex flex-wrap items-center gap-1 mb-1">
+                            <span class="bg-stone-200 text-stone-600 text-[9px] font-typewriter px-1 rounded">#${idea.id.slice(0,3)}</span>
+                            <span class="text-stone-400 font-handwriting text-[10px] md:text-sm">${formatDate(idea.createdAt)}</span>
+                            ${idea.isStarred ? `<span class="bg-blue-100 text-blue-700 text-[8px] font-typewriter px-1 rounded border border-blue-200" onclick="window.setView('events')">EVENT</span>` : ''}
                         </div>
                         
-                        <h3 class="text-lg md:text-2xl font-bold font-typewriter ${idea.isAdmin ? 'text-red-700' : 'text-stone-800'} mt-1 pr-6 md:pr-0">
+                        <h3 class="text-base md:text-2xl font-bold font-typewriter ${idea.isAdmin ? 'text-red-700' : 'text-stone-800'} mt-0 leading-tight pr-4">
                             ${idea.title}
                         </h3>
                         
-                        <div class="font-handwriting text-base md:text-xl leading-relaxed mt-2 ${idea.isAdmin ? 'font-bold text-stone-900' : 'text-stone-800'}" style="white-space: pre-wrap;">${idea.description}</div>
+                        <div class="font-handwriting text-sm md:text-xl leading-snug mt-1 ${idea.isAdmin ? 'font-bold text-stone-900' : 'text-stone-800'}" style="white-space: pre-wrap;">${idea.description}</div>
                         
-                        <div class="mt-4 pt-2 border-t border-dashed border-stone-100 flex flex-col md:flex-row justify-between md:items-end gap-2 md:gap-0">
-                            <p class="text-xs md:text-sm font-handwriting text-stone-400">Recorded by: <span class="text-stone-600">${idea.author}</span></p>
+                        <div class="mt-2 pt-2 border-t border-dashed border-stone-100 flex justify-between items-center">
+                            <p class="text-[10px] md:text-sm font-handwriting text-stone-400 truncate max-w-[60%]">By: <span class="text-stone-600">${idea.author}</span></p>
                             ${idea.isStarred ? `
-                                <button onclick="window.openDiscussion('${idea.id}')" class="text-xs font-typewriter text-blue-600 hover:underline flex items-center gap-1 self-end md:self-auto">
-                                    JOIN DISCUSSION <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                                <button onclick="window.openDiscussion('${idea.id}')" class="text-[9px] font-typewriter text-blue-600 hover:underline flex items-center gap-1">
+                                    CHAT <i data-lucide="arrow-right" class="w-3 h-3"></i>
                                 </button>
                             ` : ''}
                         </div>
@@ -637,27 +643,27 @@
 
         function renderForm() {
             return `
-                <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onclick="window.toggleForm()">
-                    <div class="bg-white p-6 md:p-8 max-w-lg w-full rounded shadow-2xl relative" onclick="event.stopPropagation()">
-                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-stone-200 px-3 py-1 text-xs font-typewriter text-stone-500 uppercase tracking-widest border border-stone-300">New Entry</div>
+                <div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onclick="window.toggleForm()">
+                    <div class="bg-white p-4 md:p-8 max-w-lg w-full rounded shadow-2xl relative" onclick="event.stopPropagation()">
+                        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-stone-200 px-3 py-1 text-[10px] font-typewriter text-stone-500 uppercase tracking-widest border border-stone-300">New Entry</div>
                         
-                        <h2 class="font-typewriter text-2xl mb-6 text-stone-800 text-center">Write in Journal</h2>
+                        <h2 class="font-typewriter text-lg md:text-2xl mb-4 text-stone-800 text-center mt-2">Write in Journal</h2>
                         
-                        <form onsubmit="window.submitIdea(event)" class="space-y-4">
+                        <form onsubmit="window.submitIdea(event)" class="space-y-3">
                             <div>
-                                <label class="block font-typewriter text-xs text-stone-400 mb-1">SUBJECT</label>
-                                <input type="text" id="newTitle" required class="w-full border-b-2 border-stone-200 focus:border-stone-800 outline-none font-handwriting text-xl py-1" placeholder="${state.isAdmin ? 'URGENT NOTICE' : 'Experiment Idea...'}">
+                                <label class="block font-typewriter text-[10px] text-stone-400 mb-1">SUBJECT</label>
+                                <input type="text" id="newTitle" required class="w-full border-b-2 border-stone-200 focus:border-stone-800 outline-none font-handwriting text-lg py-1" placeholder="${state.isAdmin ? 'URGENT NOTICE' : 'Idea Title...'}">
                             </div>
                             
                             <div>
-                                <label class="block font-typewriter text-xs text-stone-400 mb-1">DETAILS</label>
-                                <textarea id="newDesc" required rows="4" class="w-full bg-stone-50 border border-stone-200 rounded p-2 focus:border-stone-800 outline-none font-handwriting text-lg" placeholder="Observations, proposals, or theories..."></textarea>
+                                <label class="block font-typewriter text-[10px] text-stone-400 mb-1">DETAILS</label>
+                                <textarea id="newDesc" required rows="4" class="w-full bg-stone-50 border border-stone-200 rounded p-2 focus:border-stone-800 outline-none font-handwriting text-base" placeholder="What's on your mind?"></textarea>
                             </div>
 
-                            <div class="flex justify-end gap-3 pt-4">
-                                <button type="button" onclick="window.toggleForm()" class="px-4 py-2 text-stone-500 hover:text-stone-800 font-typewriter text-sm">CANCEL</button>
-                                <button type="submit" class="bg-stone-800 text-white px-6 py-2 rounded shadow hover:bg-black transition-colors font-typewriter text-sm flex items-center gap-2">
-                                    <i data-lucide="save" class="w-4 h-4"></i> SAVE
+                            <div class="flex justify-end gap-3 pt-2">
+                                <button type="button" onclick="window.toggleForm()" class="px-3 py-1 text-stone-500 hover:text-stone-800 font-typewriter text-xs">CANCEL</button>
+                                <button type="submit" class="bg-stone-800 text-white px-4 py-2 rounded shadow hover:bg-black transition-colors font-typewriter text-xs flex items-center gap-2">
+                                    <i data-lucide="save" class="w-3 h-3"></i> SAVE
                                 </button>
                             </div>
                         </form>
@@ -669,8 +675,8 @@
         function emptyState(message) {
             return `
                 <div class="flex-1 flex flex-col items-center justify-center text-center p-10 opacity-50 h-[60vh]">
-                    <i data-lucide="feather" class="w-12 h-12 mb-4 text-stone-400"></i>
-                    <p class="font-handwriting text-2xl text-stone-500">${message}</p>
+                    <i data-lucide="feather" class="w-8 h-8 mb-2 text-stone-400"></i>
+                    <p class="font-handwriting text-lg text-stone-500">${message}</p>
                 </div>
             `;
         }
@@ -692,8 +698,6 @@
             render(); // Show loading or empty state
 
             // Set up real-time listener for this discussion
-            // Using a separate collection for chats to avoid document size limits
-            // FIXED: Using COL_CHATS instead of undefined PUBLIC_DATA
             const q = query(
                 collection(db, COL_CHATS),
                 where('ideaId', '==', ideaId),
@@ -831,8 +835,6 @@
                 try {
                     // Using direct collection path
                     await deleteDoc(doc(db, COL_IDEAS, id));
-                    // Note: We leave orphan chats for now to keep it simple, 
-                    // or we could batch delete them in a cloud function.
                 } catch(err) { console.error(err); }
             }
         };
