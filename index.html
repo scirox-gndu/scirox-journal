@@ -319,11 +319,13 @@
         // --- State Management ---
         const state = {
             user: null,
+            userName: localStorage.getItem('scirox_username') || null,
             ideas: [],
             chats: [],
             loading: true,
             isAdmin: false,
             showForm: false,
+            showNameModal: false,
             currentView: 'logbook', // 'logbook', 'events', 'admin', 'discussion'
             activeDiscussionId: null, // For threaded chat
             sortBy: 'newest',
@@ -394,7 +396,6 @@
             }
 
             // Bookmarks (Navigation)
-            // Note: Styles handle moving these from Top (Mobile) to Right (Desktop)
             const bookmarksHTML = `
                 <div class="bookmark-container">
                     <div onclick="window.setView('logbook')" class="bookmark bookmark-red ${state.currentView === 'logbook' ? 'active' : ''}">
@@ -404,13 +405,14 @@
                         <span>EVENTS</span>
                     </div>
                     <div onclick="window.setView('admin')" class="bookmark bookmark-yellow ${state.currentView === 'admin' ? 'active' : ''}">
-                        <span>NOTICE</span>
+                        <span>NOTICES</span>
                     </div>
                 </div>
             `;
 
-            // Form Overlay
+            // Overlays
             const formHTML = state.showForm ? renderForm() : '';
+            const nameModalHTML = state.showNameModal ? renderNameModal() : '';
 
             // Final Assembly
             appContainer.innerHTML = `
@@ -419,6 +421,7 @@
                 </div>
                 ${bookmarksHTML}
                 ${formHTML}
+                ${nameModalHTML}
             `;
             
             lucide.createIcons();
@@ -454,14 +457,18 @@
                                 ${title}
                             </h1>
                             <div class="flex items-center justify-between w-full mt-1">
-                                <p class="text-xs md:text-xl text-stone-500 font-handwriting truncate max-w-[70%]">
+                                <p class="text-xs md:text-xl text-stone-500 font-handwriting truncate max-w-[60%]">
                                     ${state.currentView === 'discussion' 
                                         ? `<button onclick="window.setView('events')" class="text-blue-600 hover:underline flex items-center gap-1 font-bold"><i data-lucide="arrow-left" class="w-3 h-3 md:w-4 md:h-4"></i> BACK</button>` 
                                         : subtitle}
                                 </p>
                                 
-                                <!-- Controls (Font/Lock) -->
+                                <!-- Controls (Font/Lock/Name) -->
                                 <div class="flex gap-1 items-center">
+                                    <button onclick="window.openNameModal()" class="p-1.5 rounded-full hover:bg-stone-200 transition-colors text-stone-500 bg-stone-100" title="Edit Identity">
+                                        <i data-lucide="id-card" class="w-4 h-4 md:w-6 md:h-6"></i>
+                                    </button>
+                                    
                                     <button onclick="window.toggleFont()" class="p-1.5 rounded-full hover:bg-stone-200 transition-colors ${state.readableFont ? 'text-blue-600 bg-blue-50' : 'text-stone-400'}" title="Toggle Font">
                                         <i data-lucide="${state.readableFont ? 'pen-tool' : 'type'}" class="w-4 h-4 md:w-6 md:h-6"></i>
                                     </button>
@@ -672,6 +679,30 @@
             `;
         }
 
+        function renderNameModal() {
+            return `
+                <div class="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4">
+                    <div class="bg-[#fdfbf7] p-6 md:p-8 max-w-md w-full rounded shadow-2xl relative border-4 border-stone-800" style="background-image: url('https://www.transparenttextures.com/patterns/cardboard-flat.png');">
+                        <div class="text-center">
+                            <i data-lucide="fingerprint" class="w-12 h-12 mx-auto text-stone-800 mb-2"></i>
+                            <h2 class="font-typewriter text-2xl font-bold text-stone-800 mb-1">PROPERTY OF...</h2>
+                            <p class="font-handwriting text-stone-500 mb-6">Please identify yourself to the journal.</p>
+                            
+                            <form onsubmit="window.saveName(event)" class="space-y-4">
+                                <input type="text" id="userNameInput" required 
+                                    class="w-full bg-transparent border-b-2 border-stone-800 text-center font-marker text-2xl py-2 focus:outline-none placeholder-stone-300" 
+                                    placeholder="Your Name" value="${state.userName || ''}">
+                                
+                                <button type="submit" class="w-full bg-stone-800 text-white px-4 py-3 rounded font-typewriter text-sm hover:bg-black transition-colors flex items-center justify-center gap-2 mt-4">
+                                    <i data-lucide="check" class="w-4 h-4"></i> CONFIRM IDENTITY
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
         function emptyState(message) {
             return `
                 <div class="flex-1 flex flex-col items-center justify-center text-center p-10 opacity-50 h-[60vh]">
@@ -720,6 +751,27 @@
             state.showForm = !state.showForm;
             render();
         };
+
+        window.openNameModal = () => {
+            state.showNameModal = true;
+            render();
+            // Focus input after render
+            setTimeout(() => {
+                const input = document.getElementById('userNameInput');
+                if (input) input.focus();
+            }, 100);
+        };
+
+        window.saveName = (e) => {
+            e.preventDefault();
+            const name = document.getElementById('userNameInput').value.trim();
+            if (name) {
+                state.userName = name;
+                localStorage.setItem('scirox_username', name);
+                state.showNameModal = false;
+                render();
+            }
+        };
         
         window.setSort = (val) => {
             state.sortBy = val;
@@ -748,13 +800,15 @@
 
             const title = document.getElementById('newTitle').value;
             const desc = document.getElementById('newDesc').value;
+            
+            // Use stored name
+            const authorName = state.isAdmin ? 'Scirox Core Team' : (state.userName || 'Anonymous');
 
             try {
-                // Using direct collection path
                 await addDoc(collection(db, COL_IDEAS), {
                     title,
                     description: desc,
-                    author: state.isAdmin ? 'Scirox Core Team' : 'Anonymous Researcher',
+                    author: authorName,
                     authorId: state.user.uid,
                     isAdmin: state.isAdmin,
                     isStarred: false,
@@ -778,13 +832,15 @@
             if (!text || !state.activeDiscussionId || !state.user) return;
 
             input.value = ''; // Clear immediately
+            
+            // Use stored name
+            const authorName = state.isAdmin ? 'Core Team' : (state.userName || 'Member');
 
             try {
-                // Using direct collection path
                 await addDoc(collection(db, COL_CHATS), {
                     ideaId: state.activeDiscussionId,
                     text: text,
-                    author: state.isAdmin ? 'Core Team' : 'Member',
+                    author: authorName,
                     authorId: state.user.uid,
                     isAdmin: state.isAdmin,
                     createdAt: serverTimestamp()
@@ -797,7 +853,6 @@
         window.toggleStar = async (id, status) => {
             if (!state.isAdmin) return;
             try {
-                // Using direct collection path
                 await updateDoc(doc(db, COL_IDEAS, id), {
                     isStarred: status
                 });
@@ -812,7 +867,6 @@
             const idea = state.ideas.find(i => i.id === id);
             if (!idea) return;
             
-            // Using direct collection path
             const ref = doc(db, COL_IDEAS, id);
             const isUp = idea.upvoters?.includes(uid);
             const isDown = idea.downvoters?.includes(uid);
@@ -833,7 +887,6 @@
         window.deleteIdea = async (id) => {
             if (confirm("Tear out this page? This cannot be undone.")) {
                 try {
-                    // Using direct collection path
                     await deleteDoc(doc(db, COL_IDEAS, id));
                 } catch(err) { console.error(err); }
             }
@@ -843,7 +896,13 @@
         const init = async () => {
             render();
             
-            // 1. Auth (Simplified for custom project)
+            // Check for name immediately
+            if (!state.userName) {
+                state.showNameModal = true;
+                render();
+            }
+
+            // 1. Auth
             try {
                 await signInAnonymously(auth);
             } catch (error) {
@@ -854,7 +913,6 @@
             onAuthStateChanged(auth, (user) => {
                 state.user = user;
                 if (user) {
-                    // Using direct collection path
                     const q = query(collection(db, COL_IDEAS));
                     state.listeners.main = onSnapshot(q, (snapshot) => {
                         state.ideas = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
