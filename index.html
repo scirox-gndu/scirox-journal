@@ -263,6 +263,21 @@
             border-bottom-left-radius: 2px;
             border: 1px solid #e5e7eb;
         }
+        
+        /* Pinned Section */
+        .pinned-section {
+            background-image: url("https://www.transparenttextures.com/patterns/cork-board.png");
+            background-color: #e5ccb0;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+        }
+
+        /* Reply Threading */
+        .reply-thread {
+            border-left: 2px solid #e5e7eb;
+            margin-left: 12px;
+            padding-left: 8px;
+            margin-top: 4px;
+        }
 
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
@@ -326,14 +341,15 @@
             isAdmin: false,
             showForm: false,
             showNameModal: false,
-            currentView: 'logbook', // 'logbook', 'events', 'admin', 'discussion'
-            activeDiscussionId: null, // For threaded chat
+            replyingTo: null, // { id: string, author: string }
+            currentView: 'logbook',
+            activeDiscussionId: null,
             sortBy: 'newest',
             readableFont: localStorage.getItem('scirox_readable_font') === 'true',
-            listeners: {} // Store unsubscribe functions
+            listeners: {}
         };
 
-        // --- Collections (Direct Paths for Custom Project) ---
+        // --- Collections ---
         const COL_IDEAS = 'scirox_ideas'; 
         const COL_CHATS = 'scirox_chats';
 
@@ -367,12 +383,10 @@
         // --- Render Functions ---
         
         function render() {
-            // Main Container Structure
             const containerClass = `journal-binder rounded-none md:rounded-r-2xl overflow-hidden flex flex-col relative ${state.readableFont ? 'readable-mode' : ''}`;
             
             let contentHTML = '';
 
-            // Loading State
             if (state.loading) {
                 contentHTML = `
                     <div class="flex-1 flex items-center justify-center min-h-[50vh]">
@@ -382,10 +396,7 @@
                         </div>
                     </div>`;
             } else {
-                // Header (Dynamic based on View)
                 const headerHTML = renderHeader();
-                
-                // Main Content Body
                 let bodyHTML = '';
                 if (state.currentView === 'logbook') bodyHTML = renderLogbook();
                 else if (state.currentView === 'admin') bodyHTML = renderAdminLog();
@@ -395,7 +406,6 @@
                 contentHTML = headerHTML + bodyHTML;
             }
 
-            // Bookmarks (Navigation)
             const bookmarksHTML = `
                 <div class="bookmark-container">
                     <div onclick="window.setView('logbook')" class="bookmark bookmark-red ${state.currentView === 'logbook' ? 'active' : ''}">
@@ -410,11 +420,9 @@
                 </div>
             `;
 
-            // Overlays
             const formHTML = state.showForm ? renderForm() : '';
             const nameModalHTML = state.showNameModal ? renderNameModal() : '';
 
-            // Final Assembly
             appContainer.innerHTML = `
                 <div class="${containerClass}">
                     ${contentHTML}
@@ -426,10 +434,13 @@
             
             lucide.createIcons();
             
-            // Scroll chat to bottom if in discussion view
-            if (state.currentView === 'discussion') {
+            if (state.currentView === 'discussion' && !state.replyingTo) {
+                // Only scroll to bottom if not replying, otherwise user loses context
                 const chatContainer = document.getElementById('chat-container');
-                if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
+                // Simple logic: Scroll only on load or new message at bottom, but hard to detect here.
+                // We'll scroll if near bottom or initial load. 
+                // For now, simple behavior:
+                // if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
             }
         }
 
@@ -462,17 +473,13 @@
                                         ? `<button onclick="window.setView('events')" class="text-blue-600 hover:underline flex items-center gap-1 font-bold"><i data-lucide="arrow-left" class="w-3 h-3 md:w-4 md:h-4"></i> BACK</button>` 
                                         : subtitle}
                                 </p>
-                                
-                                <!-- Controls (Font/Lock/Name) -->
                                 <div class="flex gap-1 items-center">
                                     <button onclick="window.openNameModal()" class="p-1.5 rounded-full hover:bg-stone-200 transition-colors text-stone-500 bg-stone-100" title="Edit Identity">
                                         <i data-lucide="id-card" class="w-4 h-4 md:w-6 md:h-6"></i>
                                     </button>
-                                    
                                     <button onclick="window.toggleFont()" class="p-1.5 rounded-full hover:bg-stone-200 transition-colors ${state.readableFont ? 'text-blue-600 bg-blue-50' : 'text-stone-400'}" title="Toggle Font">
                                         <i data-lucide="${state.readableFont ? 'pen-tool' : 'type'}" class="w-4 h-4 md:w-6 md:h-6"></i>
                                     </button>
-                                    
                                     <button onclick="window.toggleAdmin()" class="p-1.5 rounded-full hover:bg-stone-200 transition-colors ${state.isAdmin ? 'text-red-600 bg-red-50' : 'text-stone-400'}" title="Admin Access">
                                         <i data-lucide="${state.isAdmin ? 'unlock' : 'lock'}" class="w-4 h-4 md:w-6 md:h-6"></i>
                                     </button>
@@ -480,7 +487,6 @@
                             </div>
                         </div>
                     </div>
-
                     ${state.currentView === 'logbook' ? `
                         <div class="flex gap-3 md:gap-6 font-typewriter text-[10px] md:text-sm mt-3 border-b border-stone-200 w-full overflow-x-auto pb-1">
                             <button onclick="window.setSort('newest')" class="whitespace-nowrap ${state.sortBy === 'newest' ? 'text-cyan-600 font-bold underline' : 'text-stone-400'}">Newest</button>
@@ -499,7 +505,6 @@
         function renderLogbook() {
             const sortedIdeas = sortIdeas(state.ideas);
             if (sortedIdeas.length === 0) return emptyState("Pages are empty.");
-            
             return `
                 <div class="space-y-4 md:space-y-6 px-2 md:px-20 py-4 pb-24 overflow-y-auto h-[78vh] md:h-[70vh]">
                     ${sortedIdeas.map(idea => renderIdeaCard(idea)).join('')}
@@ -509,9 +514,7 @@
 
         function renderAdminLog() {
             const adminIdeas = state.ideas.filter(i => i.isAdmin).sort((a,b) => b.createdAt?.toMillis() - a.createdAt?.toMillis());
-            
             if (adminIdeas.length === 0) return emptyState("No notices.");
-
             return `
                 <div class="space-y-4 md:space-y-6 px-2 md:px-20 py-4 pb-24 overflow-y-auto h-[78vh] md:h-[70vh]">
                     ${adminIdeas.map(idea => renderIdeaCard(idea)).join('')}
@@ -521,9 +524,7 @@
 
         function renderEventsGrid() {
             const starredIdeas = state.ideas.filter(i => i.isStarred);
-            
             if (starredIdeas.length === 0) return emptyState("No events.<br>Ask admin to star ideas.");
-
             return `
                 <div class="p-4 md:p-12 pb-24 overflow-y-auto h-[78vh] md:h-[70vh]">
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">
@@ -546,37 +547,100 @@
             const activeIdea = state.ideas.find(i => i.id === state.activeDiscussionId);
             if (!activeIdea) return emptyState("Topic missing.");
 
+            // Organize chats into Pinned, Roots, and Replies
+            const pinned = state.chats.filter(c => c.isPinned);
+            const roots = state.chats.filter(c => !c.parentId && !c.isPinned);
+            
+            // Helper to render a message
+            const renderMessage = (chat, isReply = false) => {
+                const isMe = state.user && state.user.uid === chat.authorId;
+                const likes = chat.likes || [];
+                const hasLiked = state.user && likes.includes(state.user.uid);
+                
+                return `
+                    <div class="flex flex-col w-full ${isReply ? 'reply-thread' : 'mb-3'} group">
+                        <!-- Name & Actions Row -->
+                        <div class="flex items-center justify-between mb-0.5 px-2">
+                             <div class="text-[10px] md:text-xs font-bold font-typewriter ${isMe ? 'text-blue-800' : 'text-stone-600'}">
+                                ${chat.author}
+                                ${isReply ? `<span class="text-stone-400 font-normal ml-1">replied</span>` : ''}
+                             </div>
+                             
+                             <div class="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onclick="window.startReply('${chat.id}', '${chat.author}')" class="text-stone-400 hover:text-blue-600" title="Reply">
+                                    <i data-lucide="reply" class="w-3 h-3"></i>
+                                </button>
+                                ${state.isAdmin ? `
+                                    <button onclick="window.togglePin('${chat.id}', ${!chat.isPinned})" class="text-stone-400 hover:text-yellow-600" title="Pin/Unpin">
+                                        <i data-lucide="pin" class="w-3 h-3 ${chat.isPinned ? 'fill-current text-yellow-600' : ''}"></i>
+                                    </button>
+                                    <button onclick="window.deleteMessage('${chat.id}')" class="text-stone-400 hover:text-red-600" title="Delete">
+                                        <i data-lucide="trash-2" class="w-3 h-3"></i>
+                                    </button>
+                                ` : ''}
+                             </div>
+                        </div>
+
+                        <!-- Bubble -->
+                        <div class="chat-bubble ${isMe ? 'mine' : 'theirs'} ${chat.isAdmin ? 'border border-red-200 bg-red-50' : ''} flex items-end justify-between gap-4">
+                            <div>
+                                <p class="${chat.isAdmin ? 'font-bold text-red-900' : 'text-stone-800'} text-sm md:text-base leading-snug">${chat.text}</p>
+                            </div>
+                            <!-- Like & Time -->
+                            <div class="flex flex-col items-end gap-1">
+                                <button onclick="window.toggleLike('${chat.id}')" class="flex items-center gap-0.5 text-[9px] ${hasLiked ? 'text-red-500' : 'text-stone-400 hover:text-red-400'}">
+                                    <span class="font-bold">${likes.length > 0 ? likes.length : ''}</span>
+                                    <i data-lucide="heart" class="w-3 h-3 ${hasLiked ? 'fill-current' : ''}"></i>
+                                </button>
+                                <div class="text-[8px] text-stone-400 opacity-70 whitespace-nowrap">${formatTime(chat.createdAt)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            const renderTree = (root) => {
+                const replies = state.chats.filter(c => c.parentId === root.id && !c.isPinned);
+                return `
+                    ${renderMessage(root)}
+                    ${replies.map(r => renderMessage(r, true)).join('')}
+                `;
+            };
+
             return `
                 <div class="flex flex-col h-[78vh] md:h-[70vh]">
                     <!-- Chat Area -->
-                    <div id="chat-container" class="flex-1 overflow-y-auto p-3 md:p-8 space-y-3">
+                    <div id="chat-container" class="flex-1 overflow-y-auto p-3 md:p-8 space-y-1">
                         <div class="text-center mb-4 border-b border-dashed border-stone-300 pb-2">
                             <h3 class="font-typewriter text-base md:text-xl text-stone-700 font-bold mb-1">${activeIdea.title}</h3>
                             <p class="font-handwriting text-stone-500 text-sm md:text-lg line-clamp-2">${activeIdea.description}</p>
                         </div>
                         
+                        <!-- Pinned Section -->
+                        ${pinned.length > 0 ? `
+                            <div class="pinned-section p-3 mb-4 rounded border border-stone-400 relative">
+                                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-600 text-white px-2 py-0.5 text-[10px] font-bold font-typewriter rounded shadow-sm flex items-center gap-1">
+                                    <i data-lucide="pin" class="w-3 h-3 fill-current"></i> PINNED
+                                </div>
+                                ${pinned.map(p => renderMessage(p)).join('')}
+                            </div>
+                        ` : ''}
+
                         ${state.chats.length === 0 
                             ? `<div class="text-center text-stone-400 font-handwriting italic mt-10 text-sm">No messages yet.</div>` 
-                            : state.chats.map(chat => {
-                                const isMe = state.user && state.user.uid === chat.authorId;
-                                // Name Logic: Show name explicitly
-                                const nameHTML = `<div class="text-[10px] md:text-xs font-bold font-typewriter ${isMe ? 'text-right text-blue-800 mr-2' : 'text-left text-stone-600 ml-2'} mb-0.5">${chat.author}</div>`;
-                                
-                                return `
-                                    <div class="flex flex-col w-full">
-                                        ${nameHTML}
-                                        <div class="chat-bubble ${isMe ? 'mine' : 'theirs'} ${chat.isAdmin ? 'border border-red-200 bg-red-50' : ''}">
-                                            <p class="${chat.isAdmin ? 'font-bold text-red-900' : 'text-stone-800'} text-sm md:text-base leading-snug">${chat.text}</p>
-                                            <div class="text-[9px] text-stone-400 text-right mt-1 opacity-70">${formatTime(chat.createdAt)}</div>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')
+                            : roots.map(root => renderTree(root)).join('')
                         }
                     </div>
 
                     <!-- Input Area -->
                     <div class="p-2 md:p-4 bg-stone-100 border-t border-stone-300">
+                        ${state.replyingTo ? `
+                            <div class="flex items-center justify-between bg-blue-50 px-3 py-1 mb-2 rounded border border-blue-200 text-xs">
+                                <span class="text-blue-800 font-typewriter">Replying to <strong>${state.replyingTo.author}</strong></span>
+                                <button onclick="window.cancelReply()" class="text-blue-400 hover:text-blue-800"><i data-lucide="x" class="w-3 h-3"></i></button>
+                            </div>
+                        ` : ''}
+                        
                         <form onsubmit="window.submitChat(event)" class="flex gap-2 max-w-3xl mx-auto">
                             <input type="text" id="chatInput" placeholder="Message..." autocomplete="off"
                                 class="flex-1 bg-white border border-stone-300 rounded-md px-3 py-2 font-handwriting text-base focus:outline-none focus:border-blue-500">
@@ -593,12 +657,9 @@
             const uid = state.user ? state.user.uid : null;
             const upvoted = idea.upvoters?.includes(uid);
             const score = idea.score || 0;
-
-            // Updated ml-3 to be very compact on mobile
             return `
                 <div class="entry-card rounded-sm ${idea.isAdmin ? 'border-l-4 border-l-red-500 bg-red-50/30' : ''} ml-3 md:ml-0 flex group">
                     ${idea.isAdmin ? '<div class="tape-section"></div>' : ''}
-                    
                     ${state.isAdmin ? `
                         <div class="absolute top-1 right-1 flex gap-1 z-10 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                              <button onclick="window.toggleStar('${idea.id}', ${!idea.isStarred})" class="p-1 ${idea.isStarred ? 'text-yellow-500 bg-yellow-50' : 'text-stone-300 hover:text-yellow-500'}">
@@ -609,8 +670,6 @@
                             </button>
                         </div>
                     ` : (idea.isStarred ? `<div class="absolute top-1 right-1 text-yellow-500"><i data-lucide="star" class="w-3 h-3 fill-current"></i></div>` : '')}
-
-                    <!-- Vote Column (Very skinny on mobile) -->
                     <div class="w-8 md:w-12 bg-stone-50 border-r border-dashed border-stone-200 flex flex-col items-center pt-3 gap-0 flex-shrink-0">
                         <button onclick="window.vote('${idea.id}', 'up')" class="p-0.5 hover:bg-stone-200 ${upvoted ? 'text-green-600' : 'text-stone-400'}">
                             <i data-lucide="chevron-up" class="w-4 h-4 md:w-6 md:h-6"></i>
@@ -620,21 +679,16 @@
                             <i data-lucide="chevron-down" class="w-4 h-4 md:w-6 md:h-6"></i>
                         </button>
                     </div>
-
-                    <!-- Content -->
                     <div class="flex-1 p-2 md:p-6">
                         <div class="flex flex-wrap items-center gap-1 mb-1">
                             <span class="bg-stone-200 text-stone-600 text-[9px] font-typewriter px-1 rounded">#${idea.id.slice(0,3)}</span>
                             <span class="text-stone-400 font-handwriting text-[10px] md:text-sm">${formatDate(idea.createdAt)}</span>
                             ${idea.isStarred ? `<span class="bg-blue-100 text-blue-700 text-[8px] font-typewriter px-1 rounded border border-blue-200" onclick="window.setView('events')">EVENT</span>` : ''}
                         </div>
-                        
                         <h3 class="text-base md:text-2xl font-bold font-typewriter ${idea.isAdmin ? 'text-red-700' : 'text-stone-800'} mt-0 leading-tight pr-4">
                             ${idea.title}
                         </h3>
-                        
                         <div class="font-handwriting text-sm md:text-xl leading-snug mt-1 ${idea.isAdmin ? 'font-bold text-stone-900' : 'text-stone-800'}" style="white-space: pre-wrap;">${idea.description}</div>
-                        
                         <div class="mt-2 pt-2 border-t border-dashed border-stone-100 flex justify-between items-center">
                             <p class="text-[10px] md:text-sm font-handwriting text-stone-400 truncate max-w-[60%]">By: <span class="text-stone-600">${idea.author}</span></p>
                             ${idea.isStarred ? `
@@ -653,20 +707,16 @@
                 <div class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onclick="window.toggleForm()">
                     <div class="bg-white p-4 md:p-8 max-w-lg w-full rounded shadow-2xl relative" onclick="event.stopPropagation()">
                         <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-stone-200 px-3 py-1 text-[10px] font-typewriter text-stone-500 uppercase tracking-widest border border-stone-300">New Entry</div>
-                        
                         <h2 class="font-typewriter text-lg md:text-2xl mb-4 text-stone-800 text-center mt-2">Write in Journal</h2>
-                        
                         <form onsubmit="window.submitIdea(event)" class="space-y-3">
                             <div>
                                 <label class="block font-typewriter text-[10px] text-stone-400 mb-1">SUBJECT</label>
                                 <input type="text" id="newTitle" required class="w-full border-b-2 border-stone-200 focus:border-stone-800 outline-none font-handwriting text-lg py-1" placeholder="${state.isAdmin ? 'URGENT NOTICE' : 'Idea Title...'}">
                             </div>
-                            
                             <div>
                                 <label class="block font-typewriter text-[10px] text-stone-400 mb-1">DETAILS</label>
                                 <textarea id="newDesc" required rows="4" class="w-full bg-stone-50 border border-stone-200 rounded p-2 focus:border-stone-800 outline-none font-handwriting text-base" placeholder="What's on your mind?"></textarea>
                             </div>
-
                             <div class="flex justify-end gap-3 pt-2">
                                 <button type="button" onclick="window.toggleForm()" class="px-3 py-1 text-stone-500 hover:text-stone-800 font-typewriter text-xs">CANCEL</button>
                                 <button type="submit" class="bg-stone-800 text-white px-4 py-2 rounded shadow hover:bg-black transition-colors font-typewriter text-xs flex items-center gap-2">
@@ -687,12 +737,10 @@
                             <i data-lucide="fingerprint" class="w-12 h-12 mx-auto text-stone-800 mb-2"></i>
                             <h2 class="font-typewriter text-2xl font-bold text-stone-800 mb-1">PROPERTY OF...</h2>
                             <p class="font-handwriting text-stone-500 mb-6">Please identify yourself to the journal.</p>
-                            
                             <form onsubmit="window.saveName(event)" class="space-y-4">
                                 <input type="text" id="userNameInput" required 
                                     class="w-full bg-transparent border-b-2 border-stone-800 text-center font-marker text-2xl py-2 focus:outline-none placeholder-stone-300" 
                                     placeholder="Your Name" value="${state.userName || ''}">
-                                
                                 <button type="submit" class="w-full bg-stone-800 text-white px-4 py-3 rounded font-typewriter text-sm hover:bg-black transition-colors flex items-center justify-center gap-2 mt-4">
                                     <i data-lucide="check" class="w-4 h-4"></i> CONFIRM IDENTITY
                                 </button>
@@ -722,33 +770,66 @@
         window.openDiscussion = (ideaId) => {
             state.activeDiscussionId = ideaId;
             state.currentView = 'discussion';
-            
-            // Clean up old chat listener
             if (state.listeners.chat) state.listeners.chat();
-            state.chats = []; // Clear old chats momentarily
-            render(); // Show loading or empty state
-
-            // Set up real-time listener for this discussion
-            // REMOVED 'orderBy' to fix missing index error. Sorting is now done client-side.
+            state.chats = [];
+            render();
             const q = query(
                 collection(db, COL_CHATS),
                 where('ideaId', '==', ideaId)
             );
-
             state.listeners.chat = onSnapshot(q, (snapshot) => {
                 const fetchedChats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
-                // Sort client-side
                 state.chats = fetchedChats.sort((a, b) => {
                     const tA = a.createdAt?.toMillis() || 0;
                     const tB = b.createdAt?.toMillis() || 0;
                     return tA - tB;
                 });
-                
                 render();
             }, (error) => {
                 console.error("Chat Error:", error);
             });
+        };
+
+        window.startReply = (id, author) => {
+            state.replyingTo = { id, author };
+            render();
+            setTimeout(() => document.getElementById('chatInput')?.focus(), 50);
+        };
+
+        window.cancelReply = () => {
+            state.replyingTo = null;
+            render();
+        };
+
+        window.toggleLike = async (chatId) => {
+            if (!state.user) return;
+            const chat = state.chats.find(c => c.id === chatId);
+            if (!chat) return;
+            const uid = state.user.uid;
+            const likes = chat.likes || [];
+            const hasLiked = likes.includes(uid);
+            
+            try {
+                await updateDoc(doc(db, COL_CHATS, chatId), {
+                    likes: hasLiked ? arrayRemove(uid) : arrayUnion(uid)
+                });
+            } catch(e) { console.error(e); }
+        };
+
+        window.togglePin = async (chatId, status) => {
+            if (!state.isAdmin) return;
+            try {
+                await updateDoc(doc(db, COL_CHATS, chatId), { isPinned: status });
+            } catch(e) { console.error(e); }
+        };
+
+        window.deleteMessage = async (chatId) => {
+            if (!state.isAdmin) return;
+            if(confirm("Delete this message?")) {
+                try {
+                    await deleteDoc(doc(db, COL_CHATS, chatId));
+                } catch(e) { console.error(e); }
+            }
         };
 
         window.toggleFont = () => {
@@ -765,7 +846,6 @@
         window.openNameModal = () => {
             state.showNameModal = true;
             render();
-            // Focus input after render
             setTimeout(() => {
                 const input = document.getElementById('userNameInput');
                 if (input) input.focus();
@@ -807,13 +887,9 @@
         window.submitIdea = async (e) => {
             e.preventDefault();
             if (!state.user) return;
-
             const title = document.getElementById('newTitle').value;
             const desc = document.getElementById('newDesc').value;
-            
-            // Use stored name
             const authorName = state.isAdmin ? 'Scirox Core Team' : (state.userName || 'Anonymous');
-
             try {
                 await addDoc(collection(db, COL_IDEAS), {
                     title,
@@ -828,7 +904,7 @@
                     downvoters: []
                 });
                 state.showForm = false;
-                render(); // Optimistic update handled by snapshot
+                render();
             } catch (err) {
                 console.error("Error adding doc: ", err);
                 alert("Could not write to journal. Please try again.");
@@ -841,10 +917,12 @@
             const text = input.value.trim();
             if (!text || !state.activeDiscussionId || !state.user) return;
 
-            input.value = ''; // Clear immediately
-            
-            // Use stored name
+            input.value = '';
             const authorName = state.isAdmin ? 'Core Team' : (state.userName || 'Member');
+            const parentId = state.replyingTo ? state.replyingTo.id : null;
+            
+            // Clear reply state if set
+            if(state.replyingTo) state.replyingTo = null;
 
             try {
                 await addDoc(collection(db, COL_CHATS), {
@@ -853,8 +931,12 @@
                     author: authorName,
                     authorId: state.user.uid,
                     isAdmin: state.isAdmin,
-                    createdAt: serverTimestamp()
+                    createdAt: serverTimestamp(),
+                    likes: [],
+                    isPinned: false,
+                    parentId: parentId
                 });
+                render();
             } catch (err) {
                 console.error("Error sending chat: ", err);
             }
@@ -863,12 +945,8 @@
         window.toggleStar = async (id, status) => {
             if (!state.isAdmin) return;
             try {
-                await updateDoc(doc(db, COL_IDEAS, id), {
-                    isStarred: status
-                });
-            } catch (err) {
-                console.error("Error starring:", err);
-            }
+                await updateDoc(doc(db, COL_IDEAS, id), { isStarred: status });
+            } catch (err) { console.error("Error starring:", err); }
         };
 
         window.vote = async (id, type) => {
@@ -876,11 +954,9 @@
             const uid = state.user.uid;
             const idea = state.ideas.find(i => i.id === id);
             if (!idea) return;
-            
             const ref = doc(db, COL_IDEAS, id);
             const isUp = idea.upvoters?.includes(uid);
             const isDown = idea.downvoters?.includes(uid);
-
             try {
                 if (type === 'up') {
                     if (isUp) await updateDoc(ref, { upvoters: arrayRemove(uid), score: increment(-1) });
@@ -902,24 +978,17 @@
             }
         };
 
-        // --- Init ---
         const init = async () => {
             render();
-            
-            // Check for name immediately
             if (!state.userName) {
                 state.showNameModal = true;
                 render();
             }
-
-            // 1. Auth
             try {
                 await signInAnonymously(auth);
             } catch (error) {
                 console.error("Auth failed:", error);
             }
-
-            // 2. Main Listener
             onAuthStateChanged(auth, (user) => {
                 state.user = user;
                 if (user) {
@@ -938,7 +1007,6 @@
         };
 
         init();
-
     </script>
 </body>
 </html>
