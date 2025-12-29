@@ -729,15 +729,25 @@
             render(); // Show loading or empty state
 
             // Set up real-time listener for this discussion
+            // REMOVED 'orderBy' to fix missing index error. Sorting is now done client-side.
             const q = query(
                 collection(db, COL_CHATS),
-                where('ideaId', '==', ideaId),
-                orderBy('createdAt', 'asc')
+                where('ideaId', '==', ideaId)
             );
 
             state.listeners.chat = onSnapshot(q, (snapshot) => {
-                state.chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const fetchedChats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // Sort client-side
+                state.chats = fetchedChats.sort((a, b) => {
+                    const tA = a.createdAt?.toMillis() || 0;
+                    const tB = b.createdAt?.toMillis() || 0;
+                    return tA - tB;
+                });
+                
                 render();
+            }, (error) => {
+                console.error("Chat Error:", error);
             });
         };
 
