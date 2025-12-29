@@ -34,9 +34,9 @@
             background-position: 0 0;
             box-shadow: 
                 0 0 0 5px #4a4a4a, /* Thinner edge for mobile */
-                10px 10px 30px rgba(0,0,0,0.5);
+                5px 5px 15px rgba(0,0,0,0.5);
             position: relative;
-            min-height: 90vh;
+            min-height: 90vh; /* Full height on mobile */
             transition: all 0.3s ease;
             z-index: 10;
         }
@@ -47,7 +47,7 @@
             position: absolute;
             top: 0;
             bottom: 0;
-            left: 30px;
+            left: 20px; /* Tighter margin for mobile */
             width: 2px;
             background-color: #ff9999;
             z-index: 10;
@@ -64,61 +64,79 @@
             }
         }
 
-        /* --- Tabs / Bookmarks --- */
+        /* --- Tabs / Bookmarks (Responsive) --- */
+        /* Mobile: Top Folder Tabs */
         .bookmark-container {
             position: absolute;
-            top: 100px;
-            right: -12px; /* Pull out slightly */
+            top: -38px; /* Stick out top */
+            right: 10px;
             display: flex;
-            flex-direction: column;
-            gap: 15px;
+            flex-direction: row; /* Horizontal on mobile */
+            gap: 4px;
             z-index: 5;
         }
 
-        @media (min-width: 768px) {
-            .bookmark-container {
-                right: -55px; /* Fully visible on desktop */
-                top: 80px;
-            }
-        }
-
         .bookmark {
-            width: 50px;
-            height: 140px;
-            border-top-right-radius: 10px;
-            border-bottom-right-radius: 10px;
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            width: 85px;
+            height: 45px;
+            border-radius: 10px 10px 0 0; /* Top rounded */
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
             cursor: pointer;
-            transition: transform 0.2s ease, width 0.2s ease;
+            transition: transform 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #fff;
             font-family: 'Special Elite', monospace;
             font-weight: bold;
-            text-orientation: mixed;
-            writing-mode: vertical-rl;
-            transform: rotate(0deg);
+            font-size: 0.9rem;
             position: relative;
-            border-left: 1px solid rgba(0,0,0,0.1);
-        }
-
-        @media (min-width: 768px) {
-            .bookmark {
-                width: 60px;
-                height: 160px;
-                font-size: 1.1rem;
-            }
+            border: 1px solid rgba(0,0,0,0.1);
+            border-bottom: none;
         }
 
         .bookmark:hover {
-            transform: translateX(5px);
+            transform: translateY(-5px);
         }
         
         .bookmark.active {
-            transform: translateX(-5px);
-            box-shadow: inset 2px 0 5px rgba(0,0,0,0.2);
-            width: 65px; /* Stick out more */
+            transform: translateY(-5px);
+            box-shadow: 0 -4px 8px rgba(0,0,0,0.3);
+            height: 50px; /* Taller active state */
+            z-index: 11; /* Sit above binder */
+        }
+
+        /* Desktop: Side Bookmarks */
+        @media (min-width: 768px) {
+            .bookmark-container {
+                top: 80px;
+                right: -55px;
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .bookmark {
+                width: 60px;
+                height: 160px;
+                border-radius: 0 10px 10px 0; /* Right rounded */
+                box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+                writing-mode: vertical-rl;
+                text-orientation: mixed;
+                font-size: 1.1rem;
+                border-left: 1px solid rgba(0,0,0,0.1);
+                border-bottom: 1px solid rgba(0,0,0,0.1);
+            }
+
+            .bookmark:hover {
+                transform: translateX(5px);
+            }
+            
+            .bookmark.active {
+                transform: translateX(-5px);
+                width: 65px;
+                height: 160px;
+                box-shadow: inset 2px 0 5px rgba(0,0,0,0.2);
+            }
         }
 
         .bookmark-red { background-color: #b91c1c; } /* Logbook */
@@ -132,8 +150,8 @@
             inset: 0;
             background-image: url("https://www.transparenttextures.com/patterns/cardboard-flat.png");
             opacity: 0.3;
-            border-top-right-radius: 10px;
-            border-bottom-right-radius: 10px;
+            border-radius: inherit;
+            pointer-events: none;
         }
 
         /* --- Fonts --- */
@@ -226,7 +244,7 @@
             position: relative;
             padding: 10px 15px;
             margin-bottom: 12px;
-            border-radius: 20px; /* More modern bubble look inside the rustic journal */
+            border-radius: 20px; 
             font-family: 'Patrick Hand', cursive;
             font-size: 1.1rem;
             box-shadow: 1px 1px 2px rgba(0,0,0,0.1);
@@ -251,7 +269,7 @@
         ::-webkit-scrollbar-thumb { background: #8d6e63; border-radius: 5px; }
     </style>
 </head>
-<body class="p-0 md:p-8 min-h-screen flex items-center justify-center">
+<body class="p-0 md:p-8 min-h-screen flex items-center justify-center pt-12 md:pt-8">
 
     <!-- App Container -->
     <div id="app" class="relative w-full max-w-5xl">
@@ -281,7 +299,6 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
         // --- System Configuration ---
-        // RESTORED USER CONFIGURATION
         const firebaseConfig = {
             apiKey: "AIzaSyB4eoofAdY4DrW-VKvfGJl5aNv2hoCTn4c",
             authDomain: "iist-fd6e8.firebaseapp.com",
@@ -314,7 +331,6 @@
         };
 
         // --- Collections (Direct Paths for Custom Project) ---
-        // Note: We use the root collections to match your existing data
         const COL_IDEAS = 'scirox_ideas'; 
         const COL_CHATS = 'scirox_chats';
 
@@ -371,6 +387,7 @@
             }
 
             // Bookmarks (Navigation)
+            // Note: Styles handle moving these from Top (Mobile) to Right (Desktop)
             const bookmarksHTML = `
                 <div class="bookmark-container">
                     <div onclick="window.setView('logbook')" class="bookmark bookmark-red ${state.currentView === 'logbook' ? 'active' : ''}">
@@ -415,46 +432,46 @@
                 subtitle = "Official Announcements";
             } else if (state.currentView === 'events') {
                 title = "EVENT NOTEBOOKS";
-                subtitle = "Active Discussions & Planning";
+                subtitle = "Active Discussions";
             } else if (state.currentView === 'discussion') {
                 const activeIdea = state.ideas.find(i => i.id === state.activeDiscussionId);
-                title = "EVENT DISCUSSION";
+                title = "DISCUSSION"; // Shortened for mobile
                 subtitle = activeIdea ? `Re: ${activeIdea.title}` : "Loading topic...";
             }
 
             return `
-                <header class="p-6 md:p-8 pb-4 pl-12 md:pl-24 border-b-2 border-stone-300 relative bg-stone-50/50">
+                <header class="p-6 md:p-8 pb-4 pl-8 md:pl-24 border-b-2 border-stone-300 relative bg-stone-50/50">
                     <div class="flex flex-col md:flex-row justify-between items-start">
-                        <div>
-                            <h1 class="text-3xl md:text-5xl font-typewriter font-bold text-stone-800 tracking-tighter" style="transform: rotate(-1deg);">
+                        <div class="max-w-[80%] md:max-w-full">
+                            <h1 class="text-2xl md:text-5xl font-typewriter font-bold text-stone-800 tracking-tighter" style="transform: rotate(-1deg);">
                                 ${title}
                             </h1>
-                            <p class="text-lg md:text-xl text-stone-500 font-handwriting mt-1 ml-2">
+                            <p class="text-sm md:text-xl text-stone-500 font-handwriting mt-1 ml-1 md:ml-2 truncate">
                                 ${state.currentView === 'discussion' 
-                                    ? `<button onclick="window.setView('events')" class="text-blue-600 hover:underline flex items-center gap-1"><i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Events</button>` 
+                                    ? `<button onclick="window.setView('events')" class="text-blue-600 hover:underline flex items-center gap-1"><i data-lucide="arrow-left" class="w-3 h-3 md:w-4 md:h-4"></i> Back</button>` 
                                     : subtitle}
                             </p>
                         </div>
                         
                         <!-- Controls -->
-                        <div class="absolute top-6 right-6 md:static flex gap-2 items-center">
+                        <div class="absolute top-4 right-4 md:top-6 md:right-6 md:static flex gap-1 md:gap-2 items-center">
                             <button onclick="window.toggleFont()" class="p-2 rounded-full hover:bg-stone-200 transition-colors ${state.readableFont ? 'text-blue-600 bg-blue-50' : 'text-stone-400'}" title="Toggle Font">
-                                <i data-lucide="${state.readableFont ? 'pen-tool' : 'type'}" class="w-6 h-6"></i>
+                                <i data-lucide="${state.readableFont ? 'pen-tool' : 'type'}" class="w-5 h-5 md:w-6 md:h-6"></i>
                             </button>
                             
                             <button onclick="window.toggleAdmin()" class="p-2 rounded-full hover:bg-stone-200 transition-colors ${state.isAdmin ? 'text-red-600 bg-red-50' : 'text-stone-400'}" title="Admin Access">
-                                <i data-lucide="${state.isAdmin ? 'unlock' : 'lock'}" class="w-6 h-6"></i>
+                                <i data-lucide="${state.isAdmin ? 'unlock' : 'lock'}" class="w-5 h-5 md:w-6 md:h-6"></i>
                             </button>
                         </div>
                     </div>
 
                     ${state.currentView === 'logbook' ? `
-                        <div class="flex gap-6 font-typewriter text-sm mt-4 border-b border-stone-200 w-full">
-                            <button onclick="window.setSort('newest')" class="pb-2 ${state.sortBy === 'newest' ? 'border-b-2 border-cyan-600 text-cyan-600 font-bold' : 'text-stone-400 hover:text-stone-600'}">Newest</button>
-                            <button onclick="window.setSort('rank')" class="pb-2 ${state.sortBy === 'rank' ? 'border-b-2 border-cyan-600 text-cyan-600 font-bold' : 'text-stone-400 hover:text-stone-600'}">Top Ranked</button>
-                            <div class="ml-auto">
+                        <div class="flex gap-4 md:gap-6 font-typewriter text-xs md:text-sm mt-4 border-b border-stone-200 w-full overflow-x-auto">
+                            <button onclick="window.setSort('newest')" class="pb-2 whitespace-nowrap ${state.sortBy === 'newest' ? 'border-b-2 border-cyan-600 text-cyan-600 font-bold' : 'text-stone-400 hover:text-stone-600'}">Newest</button>
+                            <button onclick="window.setSort('rank')" class="pb-2 whitespace-nowrap ${state.sortBy === 'rank' ? 'border-b-2 border-cyan-600 text-cyan-600 font-bold' : 'text-stone-400 hover:text-stone-600'}">Top Ranked</button>
+                            <div class="ml-auto flex-shrink-0">
                                 <button onclick="window.toggleForm()" class="bg-blue-600 text-white px-3 py-1 rounded-sm text-xs shadow hover:bg-blue-700 flex items-center gap-1">
-                                    <i data-lucide="plus" class="w-3 h-3"></i> ADD ENTRY
+                                    <i data-lucide="plus" class="w-3 h-3"></i> <span class="hidden sm:inline">ADD ENTRY</span>
                                 </button>
                             </div>
                         </div>
@@ -489,10 +506,10 @@
         function renderEventsGrid() {
             const starredIdeas = state.ideas.filter(i => i.isStarred);
             
-            if (starredIdeas.length === 0) return emptyState("No events are currently under discussion.<br>Star an idea in the Logbook to start a notebook.");
+            if (starredIdeas.length === 0) return emptyState("No events active.<br>Star an idea in the Logbook to discuss.");
 
             return `
-                <div class="p-8 md:p-12 pb-24 overflow-y-auto h-[70vh]">
+                <div class="p-6 md:p-12 pb-24 overflow-y-auto h-[70vh]">
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
                         ${starredIdeas.map(idea => `
                             <div onclick="window.openDiscussion('${idea.id}')" class="notebook-cover h-64 flex items-center justify-center relative group">
@@ -522,9 +539,9 @@
                 <div class="flex flex-col h-[70vh]">
                     <!-- Chat Area -->
                     <div id="chat-container" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-4">
-                        <div class="text-center mb-8 border-b border-dashed border-stone-300 pb-4">
-                            <h3 class="font-typewriter text-xl text-stone-700 font-bold mb-2">${activeIdea.title}</h3>
-                            <p class="font-handwriting text-stone-500 text-lg">${activeIdea.description}</p>
+                        <div class="text-center mb-6 border-b border-dashed border-stone-300 pb-4">
+                            <h3 class="font-typewriter text-lg md:text-xl text-stone-700 font-bold mb-2">${activeIdea.title}</h3>
+                            <p class="font-handwriting text-stone-500 text-base md:text-lg">${activeIdea.description}</p>
                         </div>
                         
                         ${state.chats.length === 0 
@@ -534,9 +551,9 @@
                                 return `
                                     <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
                                         <div class="chat-bubble ${isMe ? 'mine' : 'theirs'} ${chat.isAdmin ? 'border-red-300 bg-red-50' : ''}">
-                                            <p class="${chat.isAdmin ? 'font-bold text-red-900' : 'text-stone-800'}">${chat.text}</p>
+                                            <p class="${chat.isAdmin ? 'font-bold text-red-900' : 'text-stone-800'} text-sm md:text-base">${chat.text}</p>
                                         </div>
-                                        <span class="text-[10px] font-typewriter text-stone-400 mx-2 uppercase">
+                                        <span class="text-[9px] md:text-[10px] font-typewriter text-stone-400 mx-2 uppercase">
                                             ${chat.author} • ${formatDate(chat.createdAt)}
                                         </span>
                                     </div>
@@ -546,12 +563,12 @@
                     </div>
 
                     <!-- Input Area -->
-                    <div class="p-4 bg-stone-100 border-t border-stone-300">
+                    <div class="p-3 md:p-4 bg-stone-100 border-t border-stone-300">
                         <form onsubmit="window.submitChat(event)" class="flex gap-2 max-w-3xl mx-auto">
                             <input type="text" id="chatInput" placeholder="Write a thought..." autocomplete="off"
-                                class="flex-1 bg-white border border-stone-300 rounded-lg px-4 py-2 font-handwriting text-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                                class="flex-1 bg-white border border-stone-300 rounded-lg px-3 py-2 md:px-4 font-handwriting text-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
                             <button type="submit" class="bg-stone-800 text-white p-2 rounded-lg hover:bg-stone-700 transition-colors">
-                                <i data-lucide="send" class="w-6 h-6"></i>
+                                <i data-lucide="send" class="w-5 h-5 md:w-6 md:h-6"></i>
                             </button>
                         </form>
                     </div>
@@ -564,12 +581,13 @@
             const upvoted = idea.upvoters?.includes(uid);
             const score = idea.score || 0;
 
+            // Updated ml-8 to ensure card doesn't hit red line on mobile
             return `
-                <div class="entry-card rounded-sm ${idea.isAdmin ? 'border-l-4 border-l-red-500 bg-red-50/30' : ''} ml-6 md:ml-0 flex group">
+                <div class="entry-card rounded-sm ${idea.isAdmin ? 'border-l-4 border-l-red-500 bg-red-50/30' : ''} ml-8 md:ml-0 flex group">
                     ${idea.isAdmin ? '<div class="tape-section"></div>' : ''}
                     
                     ${state.isAdmin ? `
-                        <div class="absolute top-2 right-2 flex gap-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div class="absolute top-2 right-2 flex gap-1 z-10 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                              <button onclick="window.toggleStar('${idea.id}', ${!idea.isStarred})" class="p-1.5 ${idea.isStarred ? 'text-yellow-500 bg-yellow-50' : 'text-stone-300 hover:text-yellow-500'}" title="Star for Event Discussion">
                                 <i data-lucide="star" class="w-4 h-4 ${idea.isStarred ? 'fill-current' : ''}"></i>
                             </button>
@@ -580,34 +598,34 @@
                     ` : (idea.isStarred ? `<div class="absolute top-2 right-2 text-yellow-500" title="Starred Event"><i data-lucide="star" class="w-5 h-5 fill-current"></i></div>` : '')}
 
                     <!-- Vote Column -->
-                    <div class="w-12 bg-stone-50 border-r border-dashed border-stone-200 flex flex-col items-center pt-4 gap-1 flex-shrink-0">
+                    <div class="w-10 md:w-12 bg-stone-50 border-r border-dashed border-stone-200 flex flex-col items-center pt-4 gap-1 flex-shrink-0">
                         <button onclick="window.vote('${idea.id}', 'up')" class="p-1 rounded hover:bg-stone-200 ${upvoted ? 'text-green-600 font-bold' : 'text-stone-400'}">
-                            <i data-lucide="chevron-up" class="w-6 h-6"></i>
+                            <i data-lucide="chevron-up" class="w-5 h-5 md:w-6 md:h-6"></i>
                         </button>
-                        <span class="font-typewriter font-bold text-lg text-stone-700">${score}</span>
+                        <span class="font-typewriter font-bold text-base md:text-lg text-stone-700">${score}</span>
                         <button onclick="window.vote('${idea.id}', 'down')" class="p-1 rounded hover:bg-stone-200 ${idea.downvoters?.includes(uid) ? 'text-red-500 font-bold' : 'text-stone-400'}">
-                            <i data-lucide="chevron-down" class="w-6 h-6"></i>
+                            <i data-lucide="chevron-down" class="w-5 h-5 md:w-6 md:h-6"></i>
                         </button>
                     </div>
 
                     <!-- Content -->
-                    <div class="flex-1 p-4 md:p-6">
+                    <div class="flex-1 p-3 md:p-6">
                         <div class="flex flex-wrap items-center gap-2 mb-1">
                             <span class="bg-stone-200 text-stone-600 text-[10px] font-typewriter px-2 py-0.5 rounded">#${idea.id.slice(0,4)}</span>
-                            <span class="text-stone-400 font-handwriting text-sm">${formatDate(idea.createdAt)}</span>
-                            ${idea.isStarred ? `<span class="bg-blue-100 text-blue-700 text-[10px] font-typewriter px-2 py-0.5 rounded border border-blue-200 cursor-pointer" onclick="window.setView('events')">EVENT ACTIVE</span>` : ''}
+                            <span class="text-stone-400 font-handwriting text-xs md:text-sm">${formatDate(idea.createdAt)}</span>
+                            ${idea.isStarred ? `<span class="bg-blue-100 text-blue-700 text-[9px] md:text-[10px] font-typewriter px-2 py-0.5 rounded border border-blue-200 cursor-pointer" onclick="window.setView('events')">EVENT ACTIVE</span>` : ''}
                         </div>
                         
-                        <h3 class="text-xl md:text-2xl font-bold font-typewriter ${idea.isAdmin ? 'text-red-700' : 'text-stone-800'} mt-1">
+                        <h3 class="text-lg md:text-2xl font-bold font-typewriter ${idea.isAdmin ? 'text-red-700' : 'text-stone-800'} mt-1 pr-6 md:pr-0">
                             ${idea.title}
                         </h3>
                         
-                        <div class="font-handwriting text-lg md:text-xl leading-relaxed mt-2 ${idea.isAdmin ? 'font-bold text-stone-900' : 'text-stone-800'}" style="white-space: pre-wrap;">${idea.description}</div>
+                        <div class="font-handwriting text-base md:text-xl leading-relaxed mt-2 ${idea.isAdmin ? 'font-bold text-stone-900' : 'text-stone-800'}" style="white-space: pre-wrap;">${idea.description}</div>
                         
-                        <div class="mt-4 pt-2 border-t border-dashed border-stone-100 flex justify-between items-end">
-                            <p class="text-sm font-handwriting text-stone-400">Recorded by: <span class="text-stone-600">${idea.author}</span></p>
+                        <div class="mt-4 pt-2 border-t border-dashed border-stone-100 flex flex-col md:flex-row justify-between md:items-end gap-2 md:gap-0">
+                            <p class="text-xs md:text-sm font-handwriting text-stone-400">Recorded by: <span class="text-stone-600">${idea.author}</span></p>
                             ${idea.isStarred ? `
-                                <button onclick="window.openDiscussion('${idea.id}')" class="text-xs font-typewriter text-blue-600 hover:underline flex items-center gap-1">
+                                <button onclick="window.openDiscussion('${idea.id}')" class="text-xs font-typewriter text-blue-600 hover:underline flex items-center gap-1 self-end md:self-auto">
                                     JOIN DISCUSSION <i data-lucide="arrow-right" class="w-3 h-3"></i>
                                 </button>
                             ` : ''}
@@ -675,8 +693,9 @@
 
             // Set up real-time listener for this discussion
             // Using a separate collection for chats to avoid document size limits
+            // FIXED: Using COL_CHATS instead of undefined PUBLIC_DATA
             const q = query(
-                collection(db, PUBLIC_DATA, COL_CHATS),
+                collection(db, COL_CHATS),
                 where('ideaId', '==', ideaId),
                 orderBy('createdAt', 'asc')
             );
